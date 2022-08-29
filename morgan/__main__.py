@@ -1,0 +1,3 @@
+import morgan
+
+morgan.main()
