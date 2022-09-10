@@ -23,15 +23,15 @@ Morgan is a PyPI mirror for restricted/offline networks/environments, where
 access to the Internet is not available. It allows creating small mirrors that
 can be used by multiple "client" Python environments (i.e. CPython versions,
 operating systems, etc.). The Morgan server is a single-file script that only
-uses modules from the standard library, making it easy to deploy in such
+uses modules the standard Python library, making it easy to deploy in such
 environments.
 
-The basic idea is to run mirror utility where Internet access is available, which
-generates a directory tree ("package index") with all of the required packages
-and the server script, copy this tree to the restricted network (going through
-whatever security policies are in place), run the server inside the restricted
-network, and set `pip` in the client environments to use the mirror instead of
-pypi.org, which they can't access anyway.
+The basic idea is to run the mirror utility where Internet access is available—which
+generates a directory tree ("package index") with all of the required packages,
+their dependencies, and the server script—then copy this tree to the restricted
+network (going through whatever security policies are in place), run the server
+inside the restricted network, and set `pip` in the client environments to use
+the mirror instead of pypi.org, which they can't access anyway.
 
 ## Features and Concepts
 
@@ -40,7 +40,7 @@ pypi.org, which they can't access anyway.
   rsynced, etc.
 - Package index contains a **configuration file** that lists **markers** for
   different client environments as per [PEP 345](https://peps.python.org/pep-0345/#environment-markers), and a list of
-  **package requirement strings**, as defined by [PEP 508](https://peps.python.org/pep-0508/).
+  **package requirement strings** as per [PEP 508](https://peps.python.org/pep-0508/).
 - Mirrorer automatically and recursively mirrors **dependencies** of all direct
   requirements.
 - Only mirrors **optional dependencies** if they were part of the requirement
@@ -82,7 +82,7 @@ python3 -m pip install morgan
    definition and list of requirements (see [Sample Configuration File](#sample-configuration-file) below).
    You can use `morgan generate_env >> morgan.ini` to generate a configuration
    block for the local interpreter.
-3. Run the mirrorer from the package index via `morgan mirror` (alternatively,
+3. Run the mirrorer from inside the package index via `morgan mirror` (alternatively,
    provide the path of the package index via the `--index-path` flag).
 4. Copy the package index to the target environment, if necessary.
 5. Run the server using `python3 server.py`. Use `--help` for a full list of
@@ -130,12 +130,13 @@ All these different markers are needed because they can be used in package
 metadata, and Morgan needs them to determine which files and dependencies to
 download.
 
-This configuration file sets "requests", "protobuf" and "redis" as the packages
-to mirror, with certain version specifications for each. When the mirrorer is
-executed on a directory that contains this configuration file, it will find the
+This configuration file sets "requests", "protobuf", "redis" and "xonsh" as the
+packages to mirror, with certain version specifications for each. The xonsh
+requirements also specifies an extra which results in the downloading of certain
+optional dependencies. When the mirrorer is executed on a directory that contains this configuration file, it will find the
 latest version that satisfies the specifications of each package, download
 relevant files for each of them, and then recursively download _their_
-dependencies. It will download source files suitable for all environments, and
+dependencies. It will download source files suitable for any environment, and
 binary distributions (wheels) that match the definitions of the "legacy" and
 "edge" environments.
 
@@ -145,24 +146,26 @@ running the provided `generate_env` command in the target environment.
 ## Limitations
 
 - Morgan currently only targets CPython. Packages/binary files that are specific
-  to other Python implementations are not mirrored. This may change.
+  to other Python implementations are not mirrored. This may change in the
+  future.
 
 - Morgan only targets Python 3 packages. Python 2 packages are not mirrored and
-  probably never will be.
+  there's no currently any plan to support them.
 
 - The only binary distributions supported are wheels. Eggs are not supported and
   probably never will be.
 
 - The Morgan server is currently read-only. Packages cannot be published to the
-  local index through it. This may change in the future.
+  index through it. This may change in the future.
 
-- Morgan does not mirror packages with versions that do not comply with [PEP 440](https://peps.python.org/pep-0440/#version-scheme).
+- Morgan does not mirror packages with versions that do not comply with
+  [PEP 440](https://peps.python.org/pep-0440/#version-scheme).
   These are generally older packages that are no longer accepted by PyPI anyway.
   This is unlikely to change.
 
-- Morgan does not mirror yanked files (see [PEP 592](https://peps.python.org/pep-0592/)). These are files that should
-  not be downloaded from PyPI unless a project is specifically pinned to those
-  versions. This was a conscious decision that will probably not change, but
+- Morgan does not mirror yanked files (see [PEP 592](https://peps.python.org/pep-0592/)). This is how PyPI supports
+  removing files without breaking projects that are specifically pinned to
+  them. This was a conscious decision that will probably not change, but
   may be made configurable.
 
 ## Why Not Use X?
@@ -184,4 +187,4 @@ Morgan was written because of insufficiencies of other mirroring solutions:
 
 ## License
 
-Morgan is licensed under the terms of the [Apache License 2.0](LICENSE).
+Morgan is distributed under the terms of the [Apache License 2.0](LICENSE).
