@@ -64,5 +64,5 @@ def add_arguments(parser: argparse.ArgumentParser):
         dest='mode',
         choices=['>=', '==', '<='],
         default=">=",
-        help='Versioning mode for requirements: ">=" / "==" / "<="',
+        help='Versioning mode for requirements',
     )
