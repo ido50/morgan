@@ -3,7 +3,8 @@ import configparser
 import os
 import platform
 import sys
-
+import pkg_resources
+from collections import OrderedDict
 
 def generate_env(name: str = "local"):
     """
@@ -26,6 +27,26 @@ def generate_env(name: str = "local"):
     }
     config.write(sys.stdout)
 
+def generate_reqs(mode: str = ">="):
+    """
+    Generate a requirements configuration block from current environment.
+
+    The requirements block is printed to standard output,
+    and can either be copied to the configuration file, or piped to it
+    using shell redirection (e.g. `>>`).
+
+    Args:
+        mode (str, optional):
+            Mode to use for versioning. Use "==" for exact versioning,
+            ">=" for minimum versioning, or "<=" for maximum versioning.
+            Defaults to ">=".
+    """
+    requirements = {p.project_name.lower(): f"{mode}{p.version}" \
+        for p in pkg_resources.working_set}
+    config = configparser.ConfigParser()
+    config["requirements"] = OrderedDict(sorted(requirements.items()))
+    config.write(sys.stdout)
+
 
 def add_arguments(parser: argparse.ArgumentParser):
     """
@@ -36,4 +57,11 @@ def add_arguments(parser: argparse.ArgumentParser):
         '-e', '--env',
         dest='env',
         help='Name of environment to configure'
+    )
+
+    parser.add_argument(
+        '-m', '--mode',
+        dest='mode',
+        default=">=",
+        help='Versioning mode for requirements: ">=" / "==" / "<="',
     )
