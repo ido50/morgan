@@ -81,7 +81,9 @@ python3 -m pip install morgan
 2. Create a "morgan.ini" file in this directory, with at least one environment
    definition and list of requirements (see [Sample Configuration File](#sample-configuration-file) below).
    You can use `morgan generate_env >> morgan.ini` to generate a configuration
-   block for the local interpreter.
+   block for the local interpreter. You can also use `morgan generate_reqs >> morgan.ini`
+   to generate list of requirements from all packages installed in the current
+   environment, which is especially useful when using virtual environments.
 3. Run the mirrorer from inside the package index via `morgan mirror` (alternatively,
    provide the path of the package index via the `--index-path` flag).
 4. Copy the package index to the target environment, if necessary.
