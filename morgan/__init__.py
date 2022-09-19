@@ -7,6 +7,7 @@ import os.path
 import re
 import tarfile
 import traceback
+from typing import Iterable, Tuple, Dict
 import urllib.parse
 import urllib.request
 import zipfile
@@ -176,8 +177,8 @@ class Mirrorer:
     def _filter_files(
         self,
         requirement: packaging.requirements.Requirement,
-        files: list[dict],
-    ) -> list[dict]:
+        files: Iterable[dict],
+    ) -> Iterable[dict]:
         # remove files with unsupported extensions
         files = list(filter(lambda file: re.search(
             r"\.(whl|zip|tar.gz)$", file["filename"]), files))
@@ -273,7 +274,7 @@ class Mirrorer:
         self,
         requirement: packaging.requirements.Requirement,
         fileinfo: dict,
-    ) -> dict[str, packaging.requirements.Requirement]:
+    ) -> Dict[str, packaging.requirements.Requirement]:
         filepath = os.path.join(
             self.index_path, requirement.name, fileinfo["filename"])
         hashalg = PREFERRED_HASH_ALG\
@@ -425,7 +426,7 @@ class Mirrorer:
                 depdict.pop(dep)
 
 
-def parse_interpreter(inp: str) -> tuple[str, str]:
+def parse_interpreter(inp: str) -> Tuple[str, str]:
     """
     Parse interpreter tags in the name of a binary wheel file. Returns a tuple
     of interpreter name and optional version, which will either be <major> or

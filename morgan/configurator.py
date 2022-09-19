@@ -1,10 +1,17 @@
 import argparse
+from collections import OrderedDict
 import configparser
 import os
 import platform
 import sys
-import pkg_resources
-from collections import OrderedDict
+
+from packaging.version import Version
+
+if Version(platform.python_version()) < Version('3.8'):
+    import importlib_metadata as metadata
+else:
+    import importlib.metadata as metadata
+
 
 def generate_env(name: str = "local"):
     """
@@ -27,6 +34,7 @@ def generate_env(name: str = "local"):
     }
     config.write(sys.stdout)
 
+
 def generate_reqs(mode: str = ">="):
     """
     Generate a requirements configuration block from current environment.
@@ -41,8 +49,8 @@ def generate_reqs(mode: str = ">="):
             ">=" for minimum versioning, or "<=" for maximum versioning.
             Defaults to ">=".
     """
-    requirements = {p.project_name.lower(): f"{mode}{p.version}" \
-        for p in pkg_resources.working_set}
+    requirements = {dist.name.lower(): f"{mode}{dist.version}"
+                    for dist in metadata.distributions()}
     config = configparser.ConfigParser()
     config["requirements"] = OrderedDict(sorted(requirements.items()))
     config.write(sys.stdout)
