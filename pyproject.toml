@@ -9,6 +9,7 @@ license = "Apache License 2.0"
 python = "^3.7"
 packaging = "^21.3"
 pkginfo = "^1.8.3"
+setuptools = "^65.3.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.3"

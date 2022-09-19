@@ -491,7 +491,7 @@ def main():
 
     parser.add_argument(
         "command",
-        choices=["generate_env", "mirror", "serve", "copy_server"],
+        choices=["generate_env", "generate_reqs", "mirror", "serve", "copy_server"],
         help="Command to execute")
 
     args = parser.parse_args()
@@ -500,6 +500,8 @@ def main():
         server.run(args.index_path, args.host, args.port)
     elif args.command == "generate_env":
         configurator.generate_env(args.env)
+    elif args.command == "generate_reqs":
+        configurator.generate_reqs(args.mode)
     elif args.command == "mirror":
         mirror(args.index_path)
     elif args.command == "copy_server":
