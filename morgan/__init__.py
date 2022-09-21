@@ -158,10 +158,10 @@ class Mirrorer:
                 file_deps = self._process_file(requirement, file)
                 if file_deps:
                     depdict.update(file_deps)
-            except Exception as e:
+            except Exception:
                 print("\tFailed processing file {}, skipping it".format(
                     file["filename"]))
-                traceback.print_exception(e)
+                traceback.print_exc()
                 continue
 
         self._processed_pkgs[requirement.name] = True
@@ -195,10 +195,10 @@ class Mirrorer:
                 # packages with special versioning schemes, and we assume we
                 # can ignore such files
                 continue
-            except Exception as e:
+            except Exception:
                 print("\tSkipping file {}, exception caught".format(
                     file["filename"]))
-                traceback.print_exception(e)
+                traceback.print_exc()
                 continue
 
         # sort all files by version in reverse order, and ignore yanked files
@@ -343,33 +343,32 @@ class Mirrorer:
         package: str,
         version: packaging.version.Version,
     ) -> metadata.MetadataParser:
+        md = metadata.MetadataParser(filepath)
+
         archive = None
-        file = None
+        members = None
+        opener = None
 
-        md = metadata.MetadataParser()
-
-        if re.search(r"\.whl$", filepath):
+        if re.search(r"\.(whl|zip)$", filepath):
             archive = zipfile.ZipFile(filepath)
-            for member in archive.infolist():
-                md.parse(archive.open, member.filename)
-                if re.search(r"\.dist-info/METADATA$", member.filename):
-                    file = archive.open(member.filename)
-        elif re.search(r"\.zip$", filepath):
-            archive = zipfile.ZipFile(filepath)
-            for member in archive.infolist():
-                md.parse(archive.open, member.filename)
-                if re.fullmatch(r"([^/]+/)?PKG-INFO", member.filename):
-                    file = archive.open(member.filename)
-        else:
+            members = [member.filename for member in archive.infolist()]
+            opener = archive.open
+        elif re.search(r"\.tar.gz$", filepath):
             archive = tarfile.open(filepath)
-            for member in archive.getmembers():
-                md.parse(archive.extractfile, member.name)
-                if re.fullmatch(r"[^/]+/PKG-INFO", member.name):
-                    file = archive.extractfile(member.name)
+            members = [member.name for member in archive.getmembers()]
+            opener = archive.extractfile
+        else:
+            raise Exception("Unexpected distribution file {}".format(filepath))
 
-        if file:
-            with open("{}.metadata".format(filepath), "wb") as out:
-                out.write(file.read())
+        for member in members:
+            try:
+                md.parse(opener, member)
+            except Exception as e:
+                print("Failed parsing member {} of {}: {}".format(
+                    member, filepath, e))
+
+        if md.seen_metadata_file():
+            md.write_metadata_file("{}.metadata".format(filepath))
 
         archive.close()
 

@@ -1,5 +1,5 @@
 import email.parser
-import os
+import re
 from typing import Dict, Set, Callable, BinaryIO, Iterable
 
 from packaging.version import Version
@@ -32,6 +32,9 @@ class MetadataParser:
 
     Attributes:
     -----------
+    source_path : str
+        The name of the package archive that the object was
+        created to parse.
     name : str
         The name of the package, in canonicalized form
     version : packaging.version.Version
@@ -50,7 +53,19 @@ class MetadataParser:
         Dependencies required to build the package.
     """
 
-    def __init__(self):
+    def __init__(self, source_path: str):
+        """
+        Object constructor.
+
+        Parameters:
+        -----------
+        filename : str
+            The name of the package archive that the object
+            was created to parse.
+
+        """
+
+        self.source_path: str = source_path
         self.name: str = None
         self.version: Version = None
         self.python_requirement: SpecifierSet = None
@@ -81,22 +96,52 @@ class MetadataParser:
             the kind of file it is.
         """
 
-        dirname = os.path.dirname(filename)
-        basename = os.path.basename(filename)
+        parse_func = None
+        main_metadata_file = False
 
-        if basename == "pyproject.toml":
+        if re.search(r"\.whl$", self.source_path):
+            if re.fullmatch(r"[^/]+\.dist-info/METADATA", filename):
+                parse_func = self._parse_metadata_file
+                main_metadata_file = True
+        elif re.search(r"\.zip$", self.source_path):
+            if re.fullmatch(r"([^/]+/)?PKG-INFO", filename):
+                parse_func = self._parse_metadata_file
+                main_metadata_file = True
+        elif re.search(r"\.tar\.gz$", self.source_path):
+            if re.fullmatch(r"[^/]+/PKG-INFO", filename):
+                parse_func = self._parse_metadata_file
+                main_metadata_file = True
+            elif re.fullmatch(r"[^/]+\.egg-info/(setup_)?requires.txt", filename):
+                parse_func = self._parse_requirestxt
+            elif re.fullmatch(r"[^/]+/pyproject.toml", filename):
+                parse_func = self._parse_pyproject
+
+        if parse_func:
             with opener(filename) as fp:
-                self._parse_pyproject(fp)
-        elif dirname.endswith(".egg-info"):
-            if basename == "requires.txt":
-                with opener(filename) as fp:
-                    self._parse_requirestxt(fp, False)
-            elif basename == "setup_requires.txt":
-                with opener(filename) as fp:
-                    self._parse_requirestxt(fp, True)
-        elif basename in ["PKG-INFO", "METADATA"]:
-            with opener(filename) as fp:
-                self._parse_email_headers(fp)
+                if main_metadata_file:
+                    self._metadata_file = fp.read()
+                    fp.seek(0)
+                parse_func(fp)
+
+    def seen_metadata_file(self) -> bool:
+        """
+        Returns a boolean value if the archive's main METADATA file has already
+        been read.
+        """
+        return hasattr(self, "_metadata_file")
+
+    def write_metadata_file(self, target: str):
+        """
+        Writes the archive's main METADATA file to the target filepath, provided
+        such a file was already read. The contents of the target file will be
+        clobbered, if already existing. If the main metadata file has not been
+        read yet, an exception will be raised.
+        """
+        if not hasattr(self, "_metadata_file"):
+            raise Exception("Main METADATA file has not been read yet")
+
+        with open(target, "wb") as out:
+            out.write(self._metadata_file)
 
     def dependencies(
         self,
@@ -198,7 +243,7 @@ class MetadataParser:
             self.build_dependencies |= set(
                 [Requirement(req) for req in build_system["requires"]])
 
-    def _parse_email_headers(self, fp):
+    def _parse_metadata_file(self, fp):
         data = email.parser.BytesParser().parse(fp, True)
 
         (name, version, metadata_version) = (data.get("Name"),
@@ -256,7 +301,7 @@ class MetadataParser:
             for requirement_str in requires:
                 self.core_dependencies.add(Requirement(requirement_str))
 
-    def _parse_requirestxt(self, fp, build: bool = False):
+    def _parse_requirestxt(self, fp):
         section = None
         content = []
         for line in fp.readlines():
@@ -266,7 +311,7 @@ class MetadataParser:
                     if section or content:
                         if section:
                             self._add_optional_requirements(section, content)
-                        elif build:
+                        elif fp.name.endswith("setup_requires.txt"):
                             self._add_build_requirements(content)
                         else:
                             self._add_core_requirements(content)
@@ -279,7 +324,7 @@ class MetadataParser:
 
         if section:
             self._add_optional_requirements(section, content)
-        elif build:
+        elif fp.name.endswith("setup_requires.txt"):
             self._add_build_requirements(content)
         else:
             self._add_core_requirements(content)

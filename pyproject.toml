@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "morgan"
-version = "0.11.0"
+version = "0.11.1"
 description = "PyPI Mirror for Offline Environments"
 authors = ["Ido Perlmuter <ido@ido50.net>"]
 license = "Apache License 2.0"
@@ -16,6 +16,10 @@ pytest = "^7.1.3"
 
 [tool.poetry.scripts]
 morgan = "morgan:main"
+
+[tool.black]
+line-length = 80
+target-version = ['py37']
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
