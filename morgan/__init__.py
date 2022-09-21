@@ -17,9 +17,8 @@ import packaging.version
 import packaging.utils
 import packaging.tags
 import packaging.specifiers
-import pkginfo
 
-from morgan import server, configurator
+from morgan import server, configurator, metadata
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -72,7 +71,6 @@ class Mirrorer:
         requirement = parse_requirement(requirement_string)
 
         deps = self._mirror(requirement)
-
         if deps is None:
             return
 
@@ -167,10 +165,6 @@ class Mirrorer:
                 continue
 
         self._processed_pkgs[requirement.name] = True
-
-        # go over all the dependencies we've collected and check whether
-        # they are relevant or not
-        self._filter_dependencies(requirement, depdict)
 
         return depdict
 
@@ -281,34 +275,20 @@ class Mirrorer:
             if PREFERRED_HASH_ALG in fileinfo["hashes"]\
             else fileinfo["hashes"].keys()[0]
 
-        if self._download_file(fileinfo, filepath, hashalg):
-            try:
-                self._extract_metadata(
-                    filepath, requirement.name, fileinfo["version"])
-            except Exception as e:
-                print("\tFailed extracting {} metadata: {}".format(
-                    filepath, e)
-                )
+        self._download_file(fileinfo, filepath, hashalg)
 
-        metadata = pkginfo.Wheel(filepath) if fileinfo["is_wheel"]\
-            else pkginfo.SDist(filepath)
-        metadata_version = packaging.version.parse(
-            metadata.metadata_version)
+        md = self._extract_metadata(
+            filepath, requirement.name, fileinfo["version"])
 
-        deps = None
-        if metadata_version >= packaging.version.Version("1.2"):
-            deps = metadata.requires_dist
-        elif metadata_version == packaging.version.Version("1.1"):
-            deps = metadata.requires
-
+        deps = md.dependencies(requirement.extras, self.envs.values())
         if deps is None:
             return None
 
         depdict = {}
         for dep in deps:
-            req = parse_requirement(dep)
-            depdict[req.name] = {
-                'requirement': req,
+            dep.name = packaging.utils.canonicalize_name(dep.name)
+            depdict[dep.name] = {
+                'requirement': dep,
                 'required_by': requirement,
             }
         return depdict
@@ -362,28 +342,30 @@ class Mirrorer:
         filepath: str,
         package: str,
         version: packaging.version.Version,
-    ):
+    ) -> metadata.MetadataParser:
         archive = None
         file = None
+
+        md = metadata.MetadataParser()
 
         if re.search(r"\.whl$", filepath):
             archive = zipfile.ZipFile(filepath)
             for member in archive.infolist():
+                md.parse(archive.open, member.filename)
                 if re.search(r"\.dist-info/METADATA$", member.filename):
                     file = archive.open(member.filename)
-                    break
         elif re.search(r"\.zip$", filepath):
             archive = zipfile.ZipFile(filepath)
             for member in archive.infolist():
+                md.parse(archive.open, member.filename)
                 if re.fullmatch(r"([^/]+/)?PKG-INFO", member.filename):
                     file = archive.open(member.filename)
-                    break
         else:
             archive = tarfile.open(filepath)
             for member in archive.getmembers():
+                md.parse(archive.extractfile, member.name)
                 if re.fullmatch(r"[^/]+/PKG-INFO", member.name):
                     file = archive.extractfile(member.name)
-                    break
 
         if file:
             with open("{}.metadata".format(filepath), "wb") as out:
@@ -391,39 +373,7 @@ class Mirrorer:
 
         archive.close()
 
-    def _filter_dependencies(
-        self,
-        requirement: packaging.requirements.Requirement,
-        depdict: dict,
-    ):
-        irrelevant_deps = []
-        for dep in depdict:
-            dep_req = depdict[dep]["requirement"]
-            relevant = True
-            for extra in dep_req.extras:
-                if extra not in requirement.extras:
-                    relevant = False
-                    break
-
-            if not relevant:
-                irrelevant_deps.append(dep)
-                continue
-
-            if dep_req.marker:
-                for env_name in self.envs:
-                    env = self.envs[env_name].copy()
-                    env["extra"] = ",".join(requirement.extras)
-                    if not dep_req.marker.evaluate(env):
-                        relevant = False
-                        break
-
-            if not relevant:
-                irrelevant_deps.append(dep)
-                continue
-
-        for dep in irrelevant_deps:
-            if dep in depdict:
-                depdict.pop(dep)
+        return md
 
 
 def parse_interpreter(inp: str) -> Tuple[str, str]:
@@ -492,7 +442,8 @@ def main():
 
     parser.add_argument(
         "command",
-        choices=["generate_env", "generate_reqs", "mirror", "serve", "copy_server"],
+        choices=["generate_env", "generate_reqs",
+                 "mirror", "serve", "copy_server"],
         help="Command to execute")
 
     args = parser.parse_args()
