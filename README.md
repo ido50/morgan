@@ -165,15 +165,15 @@ it is not meant to be used as a library, and it is also meant to be used on
 project development sources, not project distributions.
 
 Morgan, therefore, implements its own dependency resolution (which heavily relies
-on the [packaging](https://pypi.org/project/packaging/) library. It utilizes an
+on the [packaging](https://pypi.org/project/packaging/) library). It utilizes an
 incremental strategy for extracting metadata from package distributions (whether
 source or binary distributions), parsing any file that may contain necessary
 metadata. Currently this includes METADATA, PKG-INFO, requires.txt,
 setup_requires.txt and pyproject.toml files. Morgan also takes into account
 build dependencies to ensure that packages that are necessary to compile source
 distributions are also available in the mirror (so, if a source distribution
-requires [hatch](https://hatch.pypa.io/), Morgan will ensure hatch is mirrored as
-well.
+requires [hatch](https://hatch.pypa.io/) in order to build, Morgan will ensure hatch is mirrored as
+well).
 
 It should be noted that recursively resolving dependencies is difficult, and
 requires care in order to prevent circular dependencies. Morgan's current
