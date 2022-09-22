@@ -111,7 +111,7 @@ class MetadataParser:
             if re.fullmatch(r"[^/]+/PKG-INFO", filename):
                 parse_func = self._parse_metadata_file
                 main_metadata_file = True
-            elif re.fullmatch(r"[^/]+\.egg-info/(setup_)?requires.txt", filename):
+            elif re.fullmatch(r"[^/]+(/[^/]+)?\.egg-info/(setup_)?requires.txt", filename):
                 parse_func = self._parse_requirestxt
             elif re.fullmatch(r"[^/]+/pyproject.toml", filename):
                 parse_func = self._parse_pyproject
@@ -175,12 +175,17 @@ class MetadataParser:
         deps |= self.build_dependencies
 
         for extra in self.optional_dependencies:
-            if extra.startswith(":"):
-                # this is a marker
-                marker = Marker(extra[1:])
+            if ":" in extra:
+                # this dependency includes a set of environment marker
+                # specifications
+                orig = extra
+                (extra, spec) = extra.split(":")
+                if extra and extra not in extras:
+                    continue
+                marker = Marker(spec)
                 for env in envs:
                     if marker.evaluate(env):
-                        deps |= self.optional_dependencies[extra]
+                        deps |= self.optional_dependencies[orig]
                         break
             elif extra in extras:
                 deps |= self.optional_dependencies[extra]
