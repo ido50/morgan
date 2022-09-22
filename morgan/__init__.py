@@ -19,6 +19,7 @@ import packaging.tags
 import packaging.specifiers
 
 from morgan import server, configurator, metadata
+from morgan.__about__ import __version__
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -441,8 +442,8 @@ def main():
 
     parser.add_argument(
         "command",
-        choices=["generate_env", "generate_reqs",
-                 "mirror", "serve", "copy_server"],
+        choices=["generate_env", "generate_reqs", "mirror", "serve",
+            "copy_server", "version"],
         help="Command to execute")
 
     args = parser.parse_args()
@@ -457,7 +458,8 @@ def main():
         mirror(args.index_path)
     elif args.command == "copy_server":
         Mirrorer(args.index_path).copy_server()
-
+    elif args.command == "version":
+        print("Morgan v{}".format(__version__))
 
 if __name__ == "__main__":
     main()
