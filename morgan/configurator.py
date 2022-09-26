@@ -49,7 +49,7 @@ def generate_reqs(mode: str = ">="):
             ">=" for minimum versioning, or "<=" for maximum versioning.
             Defaults to ">=".
     """
-    requirements = {dist.name.lower(): f"{mode}{dist.version}"
+    requirements = {dist.metadata["Name"].lower(): f"{mode}{dist.version}"
                     for dist in metadata.distributions()}
     config = configparser.ConfigParser()
     config["requirements"] = OrderedDict(sorted(requirements.items()))
