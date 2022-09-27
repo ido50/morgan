@@ -27,7 +27,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
     """
 
     def do_GET(self):
-        url = urllib.parse.urlsplit(self.path)
+        url = urllib.parse.urlsplit(urllib.parse.unquote(self.path))
 
         ct = parse_accept_header(self.headers.get("Accept"))
         if ct is None:
