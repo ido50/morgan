@@ -40,8 +40,7 @@ the mirror instead of pypi.org, which they can't access anyway.
 - Package index is a **simple directory tree** that can be easily archived, copied,
   rsynced, etc.
 - Package index contains a **configuration file** that lists **markers** for
-  different client environments as per [PEP 345](https://peps.python.org/pep-0345/#environment-markers), and a list of
-  **package requirement strings** as per [PEP 508](https://peps.python.org/pep-0508/).
+  different client **environments** and a list of **package requirement strings** as per [PEP 508](https://peps.python.org/pep-0508/).
 - Mirrorer automatically and **recursively mirrors dependencies** of all direct
   requirements.
 - Only mirrors **optional dependencies** if they were part of the requirement
@@ -95,7 +94,7 @@ python3 -m pip install morgan
 
 Environment configuration blocks can be automatically generated via
 `morgan generate_env`. I recommend you read the "Environment Markers" section of
-[PEP 345](https://peps.python.org/pep-0345/#environment-markers) to see exactly how they are calculated.
+[PEP 508](https://peps.python.org/pep-0508/#environment-markers) to see exactly how they are calculated.
 
 ```ini
 [env.legacy]
@@ -222,6 +221,12 @@ Morgan was written because of insufficiencies of other mirroring solutions:
 - [devpi](https://www.devpi.net/) also works as a caching proxy, and also attempts to automatically refresh
   from PyPI at regular intervals. It also has many non-standard-library
   dependencies.
+- [pypickup](https://github.com/UB-Quantic/pypickup) was started around the same time as Morgan. It is more fitting for
+  and offline mirror than the above three but takes a different approach than Morgan. It
+  doesn't include a server, instead relying on `pip`'s ability to install from
+  a directory tree, so this tree needs to be accessible to your servers. It also
+  favors CLI commands over a configuration file (e.g. an `add` command is used to
+  mirror a dependency). I'm not sure how it resolves dependencies, if at all.
 
 ## License
 

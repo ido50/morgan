@@ -16,7 +16,7 @@ else:
 def generate_env(name: str = "local"):
     """
     Generate a configuration block for the local client environment. This is
-    an implementation of the PEP 345 specification of "Environment Markers".
+    an implementation of the PEP 508 specification of "Environment Markers".
     Resulting block is printed to standard output, and can either be copied to
     the configuration file, or piped to it using shell redirection (e.g. `>>`).
     """
