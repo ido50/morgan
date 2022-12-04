@@ -250,10 +250,20 @@ class Mirrorer:
                 (intrp_name, intrp_ver) = parse_interpreter(tag.interpreter)
                 if intrp_name not in ("py", "cp"):
                     continue
-                if (intrp_ver and
-                        intrp_ver != "3" and
-                        intrp_ver not in self._supported_pyversions):
-                    continue
+
+                if intrp_ver:
+                    if intrp_ver[0] != "3":
+                        continue
+
+                    intrp_ver = packaging.version.parse(intrp_ver)
+
+                    supported = False
+                    for sup_ver in self._supported_pyversions:
+                        if intrp_ver <= packaging.version.parse(sup_ver):
+                            supported = True
+                            break
+                    if not supported:
+                        continue
 
                 if tag.platform == "any":
                     return True
