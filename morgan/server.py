@@ -15,6 +15,7 @@ GENL_HTML_TYPE = 'text/html'
 project_re = re.compile(r"/([^/]+)/")
 file_re = re.compile(r"/([^/]+)/([^/]+)")
 index_path = os.getcwd()
+no_metadata = False
 
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
@@ -97,6 +98,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b"\n  </body>\n</html>")
 
     def _serve_project(self, ct, project):
+        global no_metadata
         project = normalize(project)
 
         path = pathlib.Path(index_path, project)
@@ -122,8 +124,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                             file["hashes"][data[0]] = data[1]
 
                     # do we have a metadata file?
-                    if path.joinpath("{}.metadata".format(entry.name)):
-                        file["dist-info-metadata"] = True
+                    file["dist-info-metadata"] = False if no_metadata \
+                        else path.joinpath(
+                            "{}.metadata".format(entry.name)
+                        ).exists()
 
                     files.append(file)
         files.sort(key=lambda file: file["filename"])
@@ -150,23 +154,37 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 if "sha256" in file["hashes"]:
                     hashval = "#{}={}".format(
                         "sha256", file["hashes"]["sha256"])
-                self.wfile.write(
-                    "    <a href=\"{}{}\" data-dist-info-metadata=\"{}\">{}</a>{}".format(
-                        file["url"],
-                        hashval,
-                        "true" if file["dist-info-metadata"] else "false",
-                        file["filename"],
-                        newline,
-                    ).encode("utf-8"),
-                )
+                if not no_metadata and file.get("dist-info-metadata", False):
+                    self.wfile.write(
+                        "    <a href=\"{}{}\" data-dist-info-metadata=\"true\">{}</a>{}".format(
+                                file["url"],
+                                hashval,
+                                file["filename"],
+                                newline,
+                        ).encode("utf-8"),
+                    )
+                else:
+                    self.wfile.write(
+                        "    <a href=\"{}{}\">{}</a>{}".format(
+                                file["url"],
+                                hashval,
+                                file["filename"],
+                                newline,
+                        ).encode("utf-8"),
+                    )
             self.wfile.write(b"\n  </body>\n</html>")
 
     def _serve_file(self, project, filename):
+        global no_metadata
         project = normalize(project)
 
         path = pathlib.Path(index_path, project, filename)
         if not path.exists() or not path.is_file():
             self._serve_notfound("No such project {}".format(project))
+            return
+
+        if no_metadata and re.search(r"\.metadata$", filename):
+            self._serve_notfound("No such file {}".format(filename))
             return
 
         ct = "text/plain"
@@ -181,7 +199,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(path.read_bytes())
 
 
-def run(ipath: str = os.getcwd(), host: str = "0.0.0.0", port: int = 8080):
+def run(
+    ipath: str = os.getcwd(),
+    host: str = "0.0.0.0",
+    port: int = 8080,
+    nomd: bool = False,
+):
     """
     Run the server on the provided index path, listening on the provided host
     and port. All arguments are options. By default, index path is the current
@@ -190,7 +213,9 @@ def run(ipath: str = os.getcwd(), host: str = "0.0.0.0", port: int = 8080):
     """
 
     global index_path
+    global no_metadata
     index_path = ipath
+    no_metadata = nomd
     http.server.ThreadingHTTPServer(
         (host, port),
         RequestHandler,
@@ -277,6 +302,13 @@ def add_arguments(parser: argparse.ArgumentParser):
         type=int,
         help='Port to listen on',
     )
+    parser.add_argument(
+        '--no-metadata',
+        action='store_true',
+        dest='no_metadata',
+        default=False,
+        help='Do not serve metadata files',
+    )
 
 
 if __name__ == "__main__":
@@ -290,4 +322,4 @@ if __name__ == "__main__":
     add_arguments(parser)
     args = parser.parse_args()
 
-    run(args.index_path, args.host, args.port)
+    run(args.index_path, args.host, args.port, args.no_metadata)

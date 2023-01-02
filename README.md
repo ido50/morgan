@@ -14,6 +14,7 @@
 * [How Does Morgan Resolve Dependencies?](#how-does-morgan-resolve-dependencies)
 * [Limitations](#limitations)
 * [Why Not Use X?](#why-not-use-x)
+* [Troubleshooting](#troubleshooting)
 * [License](#license)
 
 <!-- vim-markdown-toc -->
@@ -227,6 +228,22 @@ Morgan was written because of insufficiencies of other mirroring solutions:
   a directory tree, so this tree needs to be accessible to your servers. It also
   favors CLI commands over a configuration file (e.g. an `add` command is used to
   mirror a dependency). I'm not sure how it resolves dependencies, if at all.
+
+## Troubleshooting
+
+- **pip fails installing a package file that exists.**
+
+  If `pip` fails with a message similar to "ERROR: Could not find a version
+  that satisfies the requirement FastAPI (from versions: 0.88.0)", despite
+  package files existing with the correct version and platform, it may be
+  that you're providing `pip` with a non-normalized name. You can either
+  use the normalized name when installing (lowercase the package name and
+  replace underscores with dashes, e.g. `pip install fastapi` instead of
+  `pip install FastAPI`), or start the server with the `--no-metadata` flag,
+  which will disable serving metadata files and workaround the issue. This seems
+  to be a non-standard behavior in `pip`, as it is sending the normalized name
+  to the server, but for some reason expecting to get the non-normalized name
+  back.
 
 ## License
 

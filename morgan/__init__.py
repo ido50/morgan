@@ -449,7 +449,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "serve":
-        server.run(args.index_path, args.host, args.port)
+        server.run(args.index_path, args.host, args.port, args.no_metadata)
     elif args.command == "generate_env":
         configurator.generate_env(args.env)
     elif args.command == "generate_reqs":
