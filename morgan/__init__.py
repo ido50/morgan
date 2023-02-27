@@ -132,10 +132,14 @@ class Mirrorer:
         with urllib.request.urlopen(request) as response:
             data = json.load(response)
 
-        if data["meta"]["api-version"] != "1.0":
+        # check metadata version ~1.0
+        v_str = data["meta"]["api-version"]
+        if not v_str:
+            v_str = '1.0'
+        v_int = [int(i) for i in v_str.split('.')[:2]]
+        if v_int[0] != 1:
             raise Exception(
-                "Unsupported metadata version {}, only support 1.0".format(
-                    data["meta"]["api-version"]))
+                f'Unsupported metadata version {v_str}, only support 1.x')
 
         files = data["files"]
         if files is None or not isinstance(files, list):
