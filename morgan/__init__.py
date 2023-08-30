@@ -7,18 +7,18 @@ import os.path
 import re
 import tarfile
 import traceback
-from typing import Iterable, Tuple, Dict
 import urllib.parse
 import urllib.request
 import zipfile
+from typing import Dict, Iterable, Tuple
 
 import packaging.requirements
-import packaging.version
-import packaging.utils
-import packaging.tags
 import packaging.specifiers
+import packaging.tags
+import packaging.utils
+import packaging.version
 
-from morgan import server, configurator, metadata
+from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
@@ -156,6 +156,9 @@ class Mirrorer:
                 # for any of our environments and don't return an error
                 return None
 
+        if len(files) == 0:
+            raise Exception(f"No files match requirement {requirement}")
+
         # download all files
         depdict = {}
         for file in files:
@@ -221,35 +224,39 @@ class Mirrorer:
                 files))
 
         if len(files) == 0:
-            print("Skipping {}, no version matches requirement".format(
-                requirement.name))
+            print(f"Skipping {requirement}, no version matches requirement")
             return None
 
+        # Now we only have files that satisfy the requirement, and we need to
+        # filter out files that do not match our environments.
+        files = list(filter(
+            lambda file: self._matches_environments(file), files))
+
+        if len(files) == 0:
+            print(f"Skipping {requirement}, no file matches environments")
+
+        # Only keep files from the latest version that satisifies all
+        # specifiers and environments
         latest_version = files[0]["version"]
         files = list(filter(
             lambda file: file["version"] == latest_version, files))
 
-        # now we only have files from the latest version that satisfies the
-        # requirement. we need to filter out files that do not match any of
-        # our environments
-        files = list(filter(
-            lambda file: self._should_download(file), files))
-
         return files
 
-    def _should_download(self, fileinfo: dict) -> bool:
+    def _matches_environments(self, fileinfo: dict) -> bool:
         if fileinfo.get("requires-python", None):
+            # The Python versions in all of our environments must be supported
+            # by this file in order to match
             spec_set = packaging.specifiers.SpecifierSet(
                 fileinfo["requires-python"])
-            supported = False
             for supported_python in self._supported_pyversions:
-                if spec_set.contains(supported_python):
-                    supported = True
-                    break
-            if not supported:
-                return False
+                if not spec_set.contains(supported_python):
+                    # file does not support the Python version of one of our
+                    # environments, reject it
+                    return False
 
         if fileinfo.get("tags", None):
+            # At least one of the tags must match ALL of our environments
             for tag in fileinfo["tags"]:
                 (intrp_name, intrp_ver) = parse_interpreter(tag.interpreter)
                 if intrp_name not in ("py", "cp"):
@@ -264,7 +271,10 @@ class Mirrorer:
                 else:
                     for platformre in self._supported_platforms:
                         if platformre.fullmatch(tag.platform):
+                            # tag matched, accept this file
                             return True
+
+            # none of the tags matched, reject this file
             return False
 
         return True
@@ -447,7 +457,7 @@ def main():
     parser.add_argument(
         "command",
         choices=["generate_env", "generate_reqs", "mirror", "serve",
-            "copy_server", "version"],
+                 "copy_server", "version"],
         help="Command to execute")
 
     args = parser.parse_args()
@@ -464,6 +474,7 @@ def main():
         Mirrorer(args.index_path).copy_server()
     elif args.command == "version":
         print("Morgan v{}".format(__version__))
+
 
 if __name__ == "__main__":
     main()
