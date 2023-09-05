@@ -246,14 +246,25 @@ class Mirrorer:
     def _matches_environments(self, fileinfo: dict) -> bool:
         if fileinfo.get("requires-python", None):
             # The Python versions in all of our environments must be supported
-            # by this file in order to match
-            spec_set = packaging.specifiers.SpecifierSet(
-                fileinfo["requires-python"])
-            for supported_python in self._supported_pyversions:
-                if not spec_set.contains(supported_python):
-                    # file does not support the Python version of one of our
-                    # environments, reject it
-                    return False
+            # by this file in order to match.
+            # Some packages specify their required Python versions with a simple
+            # number (e.g. '3') instead of an actual specifier (e.g. '>=3'),
+            # which causes the packaging library to raise an expection. Let's
+            # change such cases to a proper specifier.
+            if fileinfo["requires-python"].isdigit():
+                fileinfo["requires-python"] = "=={}".format(
+                    fileinfo["requires-python"])
+            try:
+                spec_set = packaging.specifiers.SpecifierSet(
+                    fileinfo["requires-python"])
+                for supported_python in self._supported_pyversions:
+                    if not spec_set.contains(supported_python):
+                        # file does not support the Python version of one of our
+                        # environments, reject it
+                        return False
+            except Exception as e:
+                print(f"Ignoring {fileinfo['filename']}: {e}")
+                return False
 
         if fileinfo.get("tags", None):
             # At least one of the tags must match ALL of our environments
@@ -326,7 +337,7 @@ class Mirrorer:
                 return True
 
         print("\t{}...".format(fileinfo["url"]), end=" ")
-        with urllib.request.urlopen(fileinfo["url"]) as inp,\
+        with urllib.request.urlopen(fileinfo["url"]) as inp, \
                 open(target, "wb") as out:
             out.write(inp.read())
         print("done")
