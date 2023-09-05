@@ -234,6 +234,7 @@ class Mirrorer:
 
         if len(files) == 0:
             print(f"Skipping {requirement}, no file matches environments")
+            return None
 
         # Only keep files from the latest version that satisifies all
         # specifiers and environments
