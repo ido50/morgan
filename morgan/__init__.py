@@ -110,7 +110,8 @@ class Mirrorer:
         requirement: packaging.requirements.Requirement,
         required_by: packaging.requirements.Requirement = None,
     ) -> dict:
-        if requirement.name in self._processed_pkgs:
+        req_str = str(requirement)
+        if req_str in self._processed_pkgs:
             return None
 
         if required_by:
@@ -172,7 +173,7 @@ class Mirrorer:
                 traceback.print_exc()
                 continue
 
-        self._processed_pkgs[requirement.name] = True
+        self._processed_pkgs[req_str] = True
 
         return depdict
 
@@ -444,7 +445,20 @@ def mirror(index_path: str):
 
     m = Mirrorer(index_path)
     for package in m.config["requirements"]:
-        m.mirror("{}{}".format(package, m.config["requirements"][package]))
+        reqs = m.config['requirements'][package].split()
+        if not reqs:
+            # empty requirements
+            # morgan =
+            m.mirror(f'{package}')
+        else:
+            # multiline requirements
+            # urllib3 =
+            #   <1.27
+            #   >=2
+            #   [brotli]
+            for req in reqs:
+                req = req.strip()
+                m.mirror(f'{package}{req}')
     m.copy_server()
 
 
