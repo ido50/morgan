@@ -445,7 +445,7 @@ def mirror(index_path: str):
 
     m = Mirrorer(index_path)
     for package in m.config["requirements"]:
-        reqs = m.config['requirements'][package].split()
+        reqs = m.config['requirements'][package].splitlines()
         if not reqs:
             # empty requirements
             # morgan =
