@@ -20,6 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
+from morgan.utils import to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -195,7 +196,8 @@ class Mirrorer:
                     file["is_wheel"] = True
                 elif re.search(r"\.(tar\.gz|zip)$", file["filename"]):
                     _, file["version"] = packaging.utils.parse_sdist_filename(
-                        file["filename"])
+                        # fix: selenium-2.0-dev-9429.tar.gz -> 9429
+                        to_single_dash(file["filename"]))
                     file["is_wheel"] = False
                     file["tags"] = None
             except packaging.version.InvalidVersion:
