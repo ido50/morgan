@@ -71,7 +71,14 @@ class Mirrorer:
 
         requirement = parse_requirement(requirement_string)
 
-        deps = self._mirror(requirement)
+        try:
+            deps = self._mirror(requirement)
+        except urllib.error.HTTPError as err:
+            # fail2ban
+            # urllib.error.HTTPError: HTTP Error 404: Not Found
+            print(f'\tError: {err}')
+            deps = None
+
         if deps is None:
             return
 
