@@ -33,16 +33,19 @@ class Mirrorer:
     them again as dependencies.
     """
 
-    def __init__(self, index_path: str):
+    def __init__(self, index_path: str, mirror_config: str):
         """
         The constructor only needs to path to the package index.
         """
+
+        if mirror_config is None:
+            os.path.join(self.index_path, "morgan.ini")
 
         # load the configuration from the index_path, and parse the environments
         # into representations that are easier for the mirrorer to work with
         self.index_path = index_path
         self.config = configparser.ConfigParser()
-        self.config.read(os.path.join(self.index_path, "morgan.ini"))
+        self.config.read(mirror_config)
         self.envs = {}
         self._supported_pyversions = []
         self._supported_platforms = []
@@ -63,6 +66,19 @@ class Mirrorer:
                                env["platform_machine"]))
 
         self._processed_pkgs = {}
+
+    @classmethod
+    def add_arguments(cls, parser: argparse.ArgumentParser):
+        """
+        Used to add mirror-specific command line options.
+        """
+
+        parser.add_argument(
+            '--mirror-config',
+            dest='mirror_config',
+            default=None,
+            help='Override filename/location of morgan.ini',
+        )
 
     def mirror(self, requirement_string: str):
         """
@@ -148,10 +164,13 @@ class Mirrorer:
                 "Expected response to contain a list of 'files'")
 
         # filter and enrich files
+        unfiltered_files = files
         files = self._filter_files(requirement, files)
         if files is None:
             if required_by is None:
-                raise Exception("No files match requirement")
+                raise Exception("No files match requirement.\n"
+                                f"requirement: {requirement}\n"
+                                f"files: {unfiltered_files}")
             else:
                 # this is a dependency, assume the dependency is not relevant
                 # for any of our environments and don't return an error
@@ -435,7 +454,7 @@ def parse_requirement(req_string: str) -> packaging.requirements.Requirement:
     return req
 
 
-def mirror(index_path: str):
+def mirror(index_path: str, mirror_config: str):
     """
     Run the mirror on the package index in the provided path, and based on the
     morgan.ini configuration file in the index. Copies the server script to the
@@ -443,7 +462,7 @@ def mirror(index_path: str):
     times on the same index path, files are only downloaded if necessary.
     """
 
-    m = Mirrorer(index_path)
+    m = Mirrorer(index_path, mirror_config)
     for package in m.config["requirements"]:
         reqs = m.config['requirements'][package].splitlines()
         if not reqs:
@@ -479,6 +498,7 @@ def main():
 
     server.add_arguments(parser)
     configurator.add_arguments(parser)
+    Mirrorer.add_arguments(parser)
 
     parser.add_argument(
         "command",
@@ -495,9 +515,9 @@ def main():
     elif args.command == "generate_reqs":
         configurator.generate_reqs(args.mode)
     elif args.command == "mirror":
-        mirror(args.index_path)
+        mirror(args.index_path, args.mirror_config)
     elif args.command == "copy_server":
-        Mirrorer(args.index_path).copy_server()
+        Mirrorer(args.index_path, args.mirror_config).copy_server()
     elif args.command == "version":
         print("Morgan v{}".format(__version__))
 
