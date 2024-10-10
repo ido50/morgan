@@ -4,6 +4,7 @@ import configparser
 import os
 import platform
 import sys
+import sysconfig
 
 from packaging.version import Version
 
@@ -24,6 +25,7 @@ def generate_env(name: str = "local"):
     config = configparser.ConfigParser()
     config["env.{}".format(name)] = {
         'os_name': os.name,
+        'platform_tag': sysconfig.get_platform(),
         'sys_platform': sys.platform,
         'platform_machine': platform.machine(),
         'platform_python_implementation': platform.python_implementation(),
