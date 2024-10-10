@@ -99,9 +99,10 @@ Environment configuration blocks can be automatically generated via
 
 ```ini
 [env.legacy]
-python_version = 3.7
-python_full_version = 3.7.7
+python_version = 3.9
+python_full_version = 3.9.9
 os_name = posix
+platform_tag = linux-x86_64
 sys_platform = linux
 platform_machine = i686
 platform_python_implementation = CPython
@@ -110,12 +111,13 @@ implementation_name = cpython
 
 [env.edge]
 os_name = posix
+platform_tag = linux-x86_64
 sys_platform = linux
 platform_machine = x86_64
 platform_python_implementation = CPython
 platform_system = Linux
-python_version = 3.10
-python_full_version = 3.10.6
+python_version = 3.12
+python_full_version = 3.12.7
 implementation_name = cpython
 
 [requirements]
