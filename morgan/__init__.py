@@ -21,7 +21,7 @@ import packaging.version
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
 
-PYPI_ADDRESS = "https://pypi.org/simple/"
+PYPI_ADDRESS = os.getenv("MORGAN_PYPI_ADDRESS", "https://pypi.org/simple/")
 PREFERRED_HASH_ALG = "sha256"
 
 
