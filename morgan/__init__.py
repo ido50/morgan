@@ -517,6 +517,10 @@ def main():
 
     if not args.config:
         args.config = os.path.join(args.index_path, 'morgan.ini')
+    if not os.path.isfile(args.config):
+        # If a file named in filenames cannot be opened, that file will be ignored
+        # https://docs.python.org/3.12/library/configparser.html#configparser.ConfigParser.read
+        raise argparse.ArgumentTypeError(f'Invalid config: {args.config}')
 
     if args.command == "serve":
         server.run(args.index_path, args.host, args.port, args.no_metadata)
