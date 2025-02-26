@@ -58,7 +58,8 @@ class Mirrorer:
                 env["extra"] = ""
                 self.envs[m.group(1)] = dict(env)
                 self._supported_pyversions.append(env["python_version"])
-                self._supported_platforms.append(re.compile(env["platform_tag"]))
+                if "platform_tag" in env:
+                    self._supported_platforms.append(re.compile(env["platform_tag"]))
                 self._supported_platforms.append(
                     re.compile(
                         r".*" + env["sys_platform"] + r".*" + env["platform_machine"]
