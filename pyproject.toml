@@ -14,7 +14,11 @@ keywords = [ "pypi", "mirror", "packages", "pypi-mirror" ]
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
-    "packaging~=21.3",
+    #"packaging~=21.3",
+        # hatchling 1.27.0 requires packaging>=24.2, but you have packaging 21.3 which is incompatible.
+    "packaging~=24.2",
+        # packaging.utils.InvalidSdistFilename: Invalid sdist filename (invalid version): 'expandvars-0.6.0-macosx-10.15-x86_64.tar.gz' (old versions)
+        # solved in morgan/__init__.py
     "importlib-metadata~=4.12.0; python_version < '3.8'",
     "tomli~=2.0.1",
 ]

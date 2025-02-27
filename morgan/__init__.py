@@ -215,7 +215,12 @@ class Mirrorer:
                     )
                     file["is_wheel"] = False
                     file["tags"] = None
-            except packaging.version.InvalidVersion:
+            except (packaging.version.InvalidVersion,
+                    packaging.utils.InvalidSdistFilename,
+                    packaging.utils.InvalidWheelFilename):
+                # old versions
+                # expandvars-0.6.0-macosx-10.15-x86_64.tar.gz
+
                 # ignore files with invalid version, PyPI no longer allows
                 # packages with special versioning schemes, and we assume we
                 # can ignore such files
