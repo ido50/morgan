@@ -122,6 +122,17 @@ python_version = 3.12
 python_full_version = 3.12.7
 implementation_name = cpython
 
+[env.windows]
+os_name = nt
+platform_tag = win_amd64
+sys_platform = (win|win32)
+platform_machine = AMD64
+platform_python_implementation = CPython
+platform_system = Windows
+python_version = 3.12
+python_full_version = 3.12.7
+implementation_name = cpython
+
 [requirements]
 requests = >=2.24.0
 protobuf = ==3.20.1
