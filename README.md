@@ -125,7 +125,7 @@ implementation_name = cpython
 [env.windows]
 os_name = nt
 platform_tag = win_amd64
-sys_platform = (win|win32)
+sys_platform = win32
 platform_machine = AMD64
 platform_python_implementation = CPython
 platform_system = Windows
