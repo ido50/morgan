@@ -298,10 +298,22 @@ class Mirrorer:
                 (intrp_name, intrp_ver) = parse_interpreter(tag.interpreter)
                 if intrp_name not in ("py", "cp"):
                     continue
+
+                intrp_set = packaging.specifiers.SpecifierSet(r'>=' + intrp_ver)
+                # As an example, cp38 seems to indicate CPython 3.8+, so we
+                # check if the version matches any of the supported Pythons, and
+                # only skip it if it does not match any.
+                intrp_ver_matched = any(
+                    map(
+                        lambda supported_python: intrp_set.contains(supported_python),
+                        self._supported_pyversions,
+                    )
+                )
+
                 if (
                     intrp_ver
                     and intrp_ver != "3"
-                    and intrp_ver not in self._supported_pyversions
+                    and not intrp_ver_matched
                 ):
                     continue
 
