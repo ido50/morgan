@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import to_single_dash
+from morgan.utils import Cache, to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -69,7 +69,7 @@ class Mirrorer:
                     )
                 )
 
-        self._processed_pkgs = {}
+        self._processed_pkgs = Cache()
 
     def mirror(self, requirement_string: str):
         """
@@ -125,8 +125,7 @@ class Mirrorer:
         requirement: packaging.requirements.Requirement,
         required_by: packaging.requirements.Requirement = None,
     ) -> dict:
-        req_str = str(requirement)
-        if req_str in self._processed_pkgs:
+        if self._processed_pkgs.check(requirement):
             return None
 
         if required_by:
@@ -187,7 +186,7 @@ class Mirrorer:
                 traceback.print_exc()
                 continue
 
-        self._processed_pkgs[req_str] = True
+        self._processed_pkgs.add(requirement)
 
         return depdict
 
