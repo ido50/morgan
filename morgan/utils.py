@@ -1,5 +1,8 @@
 import re
 
+from packaging.requirements import Requirement
+
+
 def to_single_dash(filename):
     'https://packaging.python.org/en/latest/specifications/version-specifiers/#version-specifiers'
 
@@ -14,3 +17,28 @@ def to_single_dash(filename):
         filename = filename[:m.start() + 1] + s2
     return filename
     # selenium-2.0.dev9429.tar.gz
+
+
+class Cache:  # pylint: disable=protected-access
+    def __init__(self):
+        self.cache: set[str] = set()
+
+    def check(self, req: Requirement) -> bool:
+        if self.is_simple_case(req):
+            return req.name in self.cache
+        return str(req) in self.cache
+
+    def add(self, req: Requirement):
+        if self.is_simple_case(req):
+            self.cache.add(req.name)
+        else:
+            self.cache.add(str(req))
+
+    def is_simple_case(self, req):
+        if not req.marker and not req.extras:
+            specifier = req.specifier
+            if not specifier:
+                return True
+            if all(spec.operator in ('>', '>=') for spec in specifier._specs):
+                return True
+        return False
