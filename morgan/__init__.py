@@ -144,8 +144,10 @@ class Mirrorer:
             },
         )
 
+        response_url = ""
         with urllib.request.urlopen(request) as response:
             data = json.load(response)
+            response_url = str(response.url)
 
         # check metadata version ~1.0
         v_str = data["meta"]["api-version"]
@@ -175,6 +177,7 @@ class Mirrorer:
         # download all files
         depdict = {}
         for file in files:
+            file["url"] = urllib.parse.urljoin(response_url, file["url"])
             try:
                 file_deps = self._process_file(requirement, file)
                 if file_deps:
