@@ -43,6 +43,7 @@ class Mirrorer:
         # into representations that are easier for the mirrorer to work with
         self.index_path = args.index_path
         self.index_url = args.index_url
+        self.package_type_regex: str = args.package_type_regex
         self.config = configparser.ConfigParser()
         self.config.read(args.config)
         self.envs = {}
@@ -199,9 +200,10 @@ class Mirrorer:
         files: Iterable[dict],
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
+        pattern: str = rf"\.{self.package_type_regex}$"
         files = list(
             filter(
-                lambda file: re.search(r"\.(whl|zip|tar.gz)$", file["filename"]), files
+                lambda file: re.search(pattern, file["filename"]), files
             )
         )
 
@@ -550,6 +552,13 @@ def main():
         dest="skip_server_copy",
         action="store_true",
         help="Skip server copy in mirror command (default: False)",
+    )
+    parser.add_argument(
+        "--package-type-regex",
+        dest="package_type_regex",
+        default=r"(whl|zip|tar\.gz)",
+        type=str,
+        help="Regular expression to filter which package file types are mirrored",
     )
 
     server.add_arguments(parser)
