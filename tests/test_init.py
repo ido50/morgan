@@ -87,6 +87,7 @@ class TestMirrorer:
             index_url="https://pypi.org/simple/",
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            package_type_regex="(whl|zip|tar.gz)",
         )
 
         mirrorer = Mirrorer(args)
@@ -105,6 +106,7 @@ class TestMirrorer:
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            package_type_regex="(whl|zip|tar.gz)",
         )
         mirrorer = Mirrorer(args)
 
@@ -128,6 +130,7 @@ class TestMirrorer:
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            package_type_regex="(whl|zip|tar.gz)",
         )
         mirrorer = Mirrorer(args)
 
@@ -176,6 +179,7 @@ class TestFilterFiles:
                 index_url="https://example.com/simple",
                 config=os.path.join(temp_index_path, "morgan.ini"),
                 mirror_all_versions=mirror_all_versions,
+                package_type_regex=r"(whl|zip|tar\.gz)"
             )
             return Mirrorer(args)
 
@@ -223,7 +227,9 @@ class TestFilterFiles:
         self, make_mirrorer, sample_files, version_spec, expected_versions
     ):
         """Test that file filtering correctly handles different version specifications."""
-        mirrorer = make_mirrorer(mirror_all_versions=True)
+        mirrorer = make_mirrorer(
+            mirror_all_versions=True,
+            )
         requirement = packaging.requirements.Requirement(
             f"sample_package{version_spec}"
         )
