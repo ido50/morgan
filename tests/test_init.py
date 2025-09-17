@@ -1,10 +1,10 @@
+# pylint: disable=missing-function-docstring,missing-class-docstring,missing-module-docstring
 import argparse
 import hashlib
 import os
-import tempfile
 
+import packaging.requirements
 import pytest
-from pathlib import Path
 
 from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server
 
@@ -86,6 +86,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url="https://pypi.org/simple/",
             config=os.path.join(temp_index_path, "morgan.ini"),
+            mirror_all_versions=False,
         )
 
         mirrorer = Mirrorer(args)
@@ -96,12 +97,14 @@ class TestMirrorer:
         assert mirrorer.envs["test_env"]["python_version"] == "3.10"
         assert mirrorer.envs["test_env"]["sys_platform"] == "linux"
         assert mirrorer.envs["test_env"]["platform_machine"] == "x86_64"
+        assert not mirrorer.mirror_all_versions
 
     def test_server_file_copying(self, temp_index_path):
         args = argparse.Namespace(
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            mirror_all_versions=False,
         )
         mirrorer = Mirrorer(args)
 
@@ -124,6 +127,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            mirror_all_versions=False,
         )
         mirrorer = Mirrorer(args)
 
@@ -144,3 +148,115 @@ class TestMirrorer:
             assert (
                 file.read() == f"sha256={expected_hash}"
             ), "Hash file content should be correctly formatted"
+
+
+class TestFilterFiles:
+    @pytest.fixture
+    def temp_index_path(self, tmpdir):
+        # Create minimal config file
+        config_path = os.path.join(tmpdir, "morgan.ini")
+        with open(config_path, "w", encoding="utf-8") as f:
+            f.write(
+                """
+                [env.test_env]
+                python_version = 3.10
+                sys_platform = linux
+                platform_machine = x86_64
+                platform_tag = manylinux
+                """
+            )
+        yield tmpdir
+
+    @pytest.fixture
+    def make_mirrorer(self, temp_index_path):
+        # Return a function that creates mirrorer instances
+        def _make_mirrorer(mirror_all_versions):
+            args = argparse.Namespace(
+                index_path=temp_index_path,
+                index_url="https://example.com/simple",
+                config=os.path.join(temp_index_path, "morgan.ini"),
+                mirror_all_versions=mirror_all_versions,
+            )
+            return Mirrorer(args)
+
+        return _make_mirrorer
+
+    @staticmethod
+    def make_file(filename, **overrides):
+        fileinfo = {
+            "filename": filename,
+            "hashes": {
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "url": f"https://example.com/{filename}",
+        }
+        fileinfo.update(overrides)
+        return fileinfo
+
+    @pytest.fixture
+    def sample_files(self):
+        return [
+            self.make_file("sample_package-1.6.0.tar.gz"),
+            self.make_file("sample_package-1.5.2.tar.gz"),
+            self.make_file("sample_package-1.5.1.tar.gz"),
+            self.make_file("sample_package-1.4.9.tar.gz"),
+        ]
+
+    @staticmethod
+    def extract_versions(files):
+        if not files:
+            return []
+
+        return [str(file["version"]) for file in files]
+
+    @pytest.mark.parametrize(
+        "version_spec,expected_versions",
+        [
+            (">=1.5.0", ["1.6.0", "1.5.2", "1.5.1"]),
+            (">=1.5.0,<1.6.0", ["1.5.2", "1.5.1"]),
+            ("==1.5.1", ["1.5.1"]),
+            (">2.0.0", []),
+        ],
+        ids=["basic_range", "complex_range", "exact_match", "no_match"],
+    )
+    def test_filter_files_with_all_versions_mirrored(
+        self, make_mirrorer, sample_files, version_spec, expected_versions
+    ):
+        """Test that file filtering correctly handles different version specifications."""
+        mirrorer = make_mirrorer(mirror_all_versions=True)
+        requirement = packaging.requirements.Requirement(
+            f"sample_package{version_spec}"
+        )
+
+        # noqa: SLF001 # pylint: disable=W0212
+        filtered_files = mirrorer._filter_files(
+            requirement=requirement, required_by=None, files=sample_files
+        )
+
+        assert self.extract_versions(filtered_files) == expected_versions
+
+    @pytest.mark.parametrize(
+        "version_spec,expected_versions",
+        [
+            (">=1.5.0", ["1.6.0"]),
+            (">=1.5.0,<1.6.0", ["1.5.2"]),
+            ("==1.5.1", ["1.5.1"]),
+            (">2.0.0", []),
+        ],
+        ids=["basic_range", "complex_range", "exact_match", "no_match"],
+    )
+    def test_filter_files_with_latest_version_mirrored(
+        self, make_mirrorer, sample_files, version_spec, expected_versions
+    ):
+        """Test that file filtering correctly handles different version specifications."""
+        mirrorer = make_mirrorer(mirror_all_versions=False)
+        requirement = packaging.requirements.Requirement(
+            f"sample_package{version_spec}"
+        )
+
+        # noqa: SLF001 # pylint: disable=W0212
+        filtered_files = mirrorer._filter_files(
+            requirement=requirement, required_by=None, files=sample_files
+        )
+
+        assert self.extract_versions(filtered_files) == expected_versions
