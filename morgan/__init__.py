@@ -44,6 +44,7 @@ class Mirrorer:
         self.index_path = args.index_path
         self.index_url = args.index_url
         self.mirror_all_versions: bool = args.mirror_all_versions
+        self.package_type_regex: str = args.package_type_regex
         self.config = configparser.ConfigParser()
         self.config.read(args.config)
         self.envs = {}
@@ -201,9 +202,10 @@ class Mirrorer:
         files: Iterable[dict],
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
+        pattern: str = rf"\.{self.package_type_regex}$"
         files = list(
             filter(
-                lambda file: re.search(r"\.(whl|zip|tar.gz)$", file["filename"]), files
+                lambda file: re.search(pattern, file["filename"]), files
             )
         )
 
@@ -574,6 +576,13 @@ def main():
             "Transitive dependencies still mirror only the latest matching release. "
             "(Default: only the latest matching release)"
         ),
+    ),
+    parser.add_argument(
+        "--package-type-regex",
+        dest="package_type_regex",
+        default=r"(whl|zip|tar\.gz)",
+        type=str,
+        help="Regular expression to filter which package file types are mirrored",
     )
 
     server.add_arguments(parser)
