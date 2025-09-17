@@ -43,6 +43,7 @@ class Mirrorer:
         # into representations that are easier for the mirrorer to work with
         self.index_path = args.index_path
         self.index_url = args.index_url
+        self.mirror_all_versions: bool = args.mirror_all_versions
         self.config = configparser.ConfigParser()
         self.config.read(args.config)
         self.envs = {}
@@ -162,7 +163,7 @@ class Mirrorer:
             raise Exception("Expected response to contain a list of 'files'")
 
         # filter and enrich files
-        files = self._filter_files(requirement, files)
+        files = self._filter_files(requirement, required_by, files)
         if files is None:
             if required_by is None:
                 raise Exception("No files match requirement")
@@ -196,6 +197,7 @@ class Mirrorer:
     def _filter_files(
         self,
         requirement: packaging.requirements.Requirement,
+        required_by: packaging.requirements.Requirement,
         files: Iterable[dict],
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
@@ -265,10 +267,11 @@ class Mirrorer:
             print(f"Skipping {requirement}, no file matches environments")
             return None
 
-        # Only keep files from the latest version that satisifies all
-        # specifiers and environments
-        latest_version = files[0]["version"]
-        files = list(filter(lambda file: file["version"] == latest_version, files))
+        # Only keep files from the latest version in case the package is a dependency of another
+        # otherwise, if it's a top-level package, make it dependent on the all_versions flag
+        if not self.mirror_all_versions or required_by is not None:
+            latest_version = files[0]["version"]
+            files = list(filter(lambda file: file["version"] == latest_version, files))
 
         return files
 
@@ -550,6 +553,18 @@ def main():
         dest="skip_server_copy",
         action="store_true",
         help="Skip server copy in mirror command (default: False)",
+    )
+    parser.add_argument(
+        "-a",
+        "--mirror-all-versions",
+        dest="mirror_all_versions",
+        action="store_true",
+        help=(
+            "For packages listed in the [requirements] section, mirror every release "
+            "that matches their version specifiers. "
+            "Transitive dependencies still mirror only the latest matching release. "
+            "(Default: only the latest matching release)"
+        ),
     )
 
     server.add_arguments(parser)
