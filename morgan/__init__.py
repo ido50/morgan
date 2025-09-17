@@ -494,7 +494,9 @@ def mirror(args: argparse.Namespace):
             for req in reqs:
                 req = req.strip()
                 m.mirror(f"{package}{req}")
-    m.copy_server()
+
+    if not args.skip_server_copy:
+        m.copy_server()
 
 
 def main():
@@ -537,6 +539,12 @@ def main():
         dest="config",
         nargs="?",
         help="Config file (default: <INDEX_PATH>/morgan.ini)",
+    )
+    parser.add_argument(
+        "--skip-server-copy",
+        dest="skip_server_copy",
+        action="store_true",
+        help="Skip server copy in mirror command (default: False)",
     )
 
     server.add_arguments(parser)
