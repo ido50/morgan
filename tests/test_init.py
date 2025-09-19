@@ -152,9 +152,9 @@ class TestMirrorer:
 
 class TestFilterFiles:
     @pytest.fixture
-    def temp_index_path(self, tmpdir):
+    def temp_index_path(self, tmp_path):
         # Create minimal config file
-        config_path = os.path.join(tmpdir, "morgan.ini")
+        config_path = os.path.join(tmp_path, "morgan.ini")
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(
                 """
@@ -165,7 +165,7 @@ class TestFilterFiles:
                 platform_tag = manylinux
                 """
             )
-        yield tmpdir
+        yield tmp_path
 
     @pytest.fixture
     def make_mirrorer(self, temp_index_path):
