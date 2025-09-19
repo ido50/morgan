@@ -361,7 +361,11 @@ class Mirrorer:
         depdict = {}
         for dep in deps:
             dep.name = packaging.utils.canonicalize_name(dep.name)
-            depdict[dep.name] = {
+            # keep the index of the dictionary for the full requirement string to pull in potentially
+            # duplicate requirements like "mylibrary<2,>=1" and "mylibrary>=2,<3" that may come from different
+            # top-level requirements
+            dep_index = str(dep)
+            depdict[dep_index] = {
                 "requirement": dep,
                 "required_by": requirement,
             }
