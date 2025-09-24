@@ -9,8 +9,7 @@ clean() {
 }
 
 main() {
-    local days=$1
-    [[ ! $days ]] && days=5
+    local days=${1:-5}
     echo "searching old ($days days) projects ..."
 
     # tmp = today - X days
