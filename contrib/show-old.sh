@@ -31,7 +31,7 @@ main() {
         # report old only once
         echo "$d1"
         ok[$d1]=1
-    done < <(find -mindepth 2 -maxdepth 2 -type f -name '*.metadata' ! -newer "$tmp")
+    done < <(find . -mindepth 2 -maxdepth 2 -type f -name '*.metadata' ! -newer "$tmp")
 }
 
 main "$@"
