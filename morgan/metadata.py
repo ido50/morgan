@@ -145,8 +145,8 @@ class MetadataParser:
 
     def dependencies(
         self,
-        extras: Set[str] = set(),
-        envs: Iterable[Dict] = []
+        extras: Set[str],
+        envs: Iterable[Dict]
     ) -> Set[Requirement]:
         """
         Resolves the dependencies of the package, returning a set of
