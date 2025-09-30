@@ -20,7 +20,13 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, is_requirement_relevant, to_single_dash, touch_file
+from morgan.utils import (
+    Cache,
+    ListExtendingOrderedDict,
+    is_requirement_relevant,
+    to_single_dash,
+    touch_file,
+)
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -45,7 +51,9 @@ class Mirrorer:
         self.index_url = args.index_url
         self.mirror_all_versions: bool = args.mirror_all_versions
         self.package_type_regex: str = args.package_type_regex
-        self.config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser(
+            strict=False, dict_type=ListExtendingOrderedDict
+        )
         self.config.read(args.config)
         self.envs = {}
         self._supported_pyversions = []
