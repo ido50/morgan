@@ -388,7 +388,12 @@ class Mirrorer:
 
         truehash = self._hash_file(target, hashalg)
         if truehash != exphash:
-            raise Exception("Digest mismatch for {}".format(fileinfo["filename"]))
+            os.remove(target)
+            raise ValueError(
+                "Digest mismatch for {}. Deleting file {}.".format(
+                    fileinfo["filename"], target
+                )
+            )
 
         return True
 
