@@ -89,6 +89,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
             package_type_regex="(whl|zip|tar.gz)",
+            mirror_all_wheels=False,
         )
 
         mirrorer = Mirrorer(args)
@@ -108,6 +109,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
             package_type_regex="(whl|zip|tar.gz)",
+            mirror_all_wheels=False,
         )
         mirrorer = Mirrorer(args)
 
@@ -132,6 +134,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
             package_type_regex="(whl|zip|tar.gz)",
+            mirror_all_wheels=False,
         )
         mirrorer = Mirrorer(args)
 

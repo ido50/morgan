@@ -10,6 +10,7 @@ import traceback
 import urllib.parse
 import urllib.request
 import zipfile
+from collections import defaultdict
 from typing import Dict, Iterable, Optional, Tuple
 
 import packaging.requirements
@@ -49,6 +50,7 @@ class Mirrorer:
         # into representations that are easier for the mirrorer to work with
         self.index_path = args.index_path
         self.index_url = args.index_url
+        self.mirror_all_wheels: bool = args.mirror_all_wheels
         self.mirror_all_versions: bool = args.mirror_all_versions
         self.package_type_regex: str = args.package_type_regex
         self.config = configparser.ConfigParser(
@@ -278,14 +280,56 @@ class Mirrorer:
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(
-            filter(
-                lambda file: self._matches_environments(
-                    file, self._supported_pyversions, self._supported_platforms
-                ),
-                files
+        if self.mirror_all_wheels:
+            files = list(
+                filter(
+                    lambda file: self._matches_environments(
+                        file, self._supported_pyversions, self._supported_platforms
+                    ),
+                    files,
+                )
             )
-        )
+        else:
+            # Group files by version
+            files_by_version: defaultdict = defaultdict(list)
+            for file in files:
+                files_by_version[file["version"]].append(file)
+
+            # For each version, select the best matching wheels
+            files = []
+            for version_files in files_by_version.values():
+                wheels = [f for f in version_files if f.get("is_wheel", False)]
+                non_wheels = [f for f in version_files if not f.get("is_wheel", False)]
+
+                # Sort wheels by score (highest first)
+                wheels = sorted(
+                    wheels, key=self._calculate_scores_for_wheel, reverse=True
+                )
+
+                selected_files = []
+
+                for python_version in self._supported_pyversions:
+                    for platform_pattern in self._supported_platforms:
+                        for non_wheel in non_wheels:
+                            if self._matches_environments(
+                                non_wheel, [python_version], [platform_pattern]
+                            ):
+                                if non_wheel not in selected_files:  # avoid duplicates
+                                    selected_files.append(non_wheel)
+                                break
+
+                        for wheel in wheels + non_wheels:
+                            if self._matches_environments(
+                                wheel, [python_version], [platform_pattern]
+                            ):
+                                if wheel not in selected_files:  # avoid duplicates
+                                    selected_files.append(wheel)
+                                break
+
+                files.extend(selected_files)
+
+            # make sure the list is sorted by version again
+            files.sort(key=lambda file: file["version"], reverse=True)
 
         if len(files) == 0:
             print(f"Skipping {requirement}, no file matches environments")
@@ -359,6 +403,67 @@ class Mirrorer:
             return False
 
         return True
+
+    def _calculate_scores_for_wheel(self, file: dict) -> Tuple[int, int]:
+        """Calculate scoring tuple for a file to determine best wheel selection.
+
+        Assigns high scores to non-wheel files (sdists) to ensure they're always included.
+        For wheel files, calculates scores based on Python version and manylinux tag
+        to enable selection of the most compatible wheel for each platform.
+
+        Args:
+            file: Dictionary containing package file information with keys 'is_wheel' and 'tags'
+
+        Returns:
+            A tuple of (python_score, platform_score) where:
+                - python_score (int): Python version as an integer (e.g., 3.11 = 311).
+                Non-wheels get 1e10 to ensure they're always kept.
+                - platform_score (int): Numeric representation of manylinux tag.
+                Modern formats use glibc version (e.g., manylinux_2_28 = 228).
+                Deprecated formats have fixed scores: manylinux2014 = 90,
+                manylinux2010 = 80, manylinux1 = 70. Non-wheels get a very high value.
+
+        Note:
+            The scoring algorithm prioritizes:
+            1. Higher Python version (e.g., cp311 over cp39)
+            2. Newer platform tags with higher scores (e.g., manylinux_2_28 [228] over
+            manylinux2014 [90] over manylinux1 [70])
+            Only CPython (cp) and generic Python (py) interpreters are considered.
+
+        """
+        if file.get("is_wheel", False) is False:
+            return (int(1e10), int(1e10))
+
+        best_score: Tuple[int, int] = (0, 0)
+
+        for tag in file.get("tags", []):
+            # Calculate Python score
+            interpreter_name, py_version = parse_interpreter(tag.interpreter)
+            if interpreter_name not in ("cp", "py") or not py_version:
+                continue
+
+            version_obj = packaging.version.Version(py_version)
+            py_score = version_obj.major * 100 + version_obj.minor
+
+            # Calculate platform score
+            platform = tag.platform
+            platform_score = 0
+            match = re.search(r"[a-z]+_(\d+)_(\d+)", platform)
+            if match:
+                # this provides a minimum platform_score of 100 (glibc 1.0 = 100+0 = 100)
+                platform_score = int(match.group(1)) * 100 + int(match.group(2))
+            elif "manylinux2014" in platform:
+                platform_score = 90
+            elif "manylinux2010" in platform:
+                platform_score = 80
+            elif "manylinux1" in platform:
+                platform_score = 70
+
+            # Keep the lexicographically maximum tuple (highest py_score, then highest platform_score)
+            current_score = (py_score, platform_score)
+            best_score = max(best_score, current_score)
+
+        return best_score
 
     def _process_file(
         self,
@@ -607,6 +712,16 @@ def main():
         default=r"(whl|zip|tar\.gz)",
         type=str,
         help="Regular expression to filter which package file types are mirrored",
+    )
+    parser.add_argument(
+        "-W",
+        "--mirror-all-wheels",
+        dest="mirror_all_wheels",
+        action="store_true",
+        help=(
+            "Download all compatible wheels for each version. "
+            "(default: fetch only the wheel for latest compatible Python version)"
+        ),
     )
 
     server.add_arguments(parser)
