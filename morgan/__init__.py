@@ -278,7 +278,14 @@ class Mirrorer:
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(filter(lambda file: self._matches_environments(file), files))
+        files = list(
+            filter(
+                lambda file: self._matches_environments(
+                    file, self._supported_pyversions, self._supported_platforms
+                ),
+                files
+            )
+        )
 
         if len(files) == 0:
             print(f"Skipping {requirement}, no file matches environments")
@@ -292,7 +299,10 @@ class Mirrorer:
 
         return files
 
-    def _matches_environments(self, fileinfo: dict) -> bool:
+    @staticmethod
+    def _matches_environments(
+        fileinfo: dict, supported_pyversions: list, supported_platforms: list
+    ) -> bool:
         if req := fileinfo.get("requires-python"):
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
@@ -308,7 +318,7 @@ class Mirrorer:
             req = fileinfo["requires-python"] = re.sub(r"([0-9])\.?\*", r"\1", req)
             try:
                 spec_set = packaging.specifiers.SpecifierSet(req)
-                for supported_python in self._supported_pyversions:
+                for supported_python in supported_pyversions:
                     if not spec_set.contains(supported_python):
                         # file does not support the Python version of one of our
                         # environments, reject it
@@ -331,7 +341,7 @@ class Mirrorer:
                 intrp_ver_matched = any(
                     map(
                         lambda supported_python: intrp_set.contains(supported_python),
-                        self._supported_pyversions,
+                        supported_pyversions,
                     )
                 )
 
@@ -340,7 +350,7 @@ class Mirrorer:
 
                 if tag.platform == "any":
                     return True
-                for platformre in self._supported_platforms:
+                for platformre in supported_platforms:
                     if platformre.fullmatch(tag.platform):
                         # tag matched, accept this file
                         return True
