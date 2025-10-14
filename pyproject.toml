@@ -57,5 +57,4 @@ morgan = "morgan:main"
 
 [tool.black]
 line-length = 80
-skip-string-normalization = true
 target-version = ['py38']
