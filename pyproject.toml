@@ -12,14 +12,17 @@ authors = [
 license = { file="LICENSE" }
 keywords = [ "pypi", "mirror", "packages", "pypi-mirror" ]
 readme = "README.md"
-requires-python = ">=3.7"
+#requires-python = ">=3.7"
+    # ruff warning:
+    # __init__.py:273:12: SyntaxError: Cannot use named assignment expression (`:=`) on Python 3.7 (syntax was added in Python 3.8)
+requires-python = ">=3.8"
 dependencies = [
     #"packaging~=21.3",
         # hatchling 1.27.0 requires packaging>=24.2, but you have packaging 21.3 which is incompatible.
     "packaging~=24.2",
         # packaging.utils.InvalidSdistFilename: Invalid sdist filename (invalid version): 'expandvars-0.6.0-macosx-10.15-x86_64.tar.gz' (old versions)
         # solved in morgan/__init__.py
-    "importlib-metadata~=4.12.0; python_version < '3.8'",
+    #"importlib-metadata~=4.12.0; python_version < '3.8'",
     "tomli~=2.0.1",
 ]
 classifiers = [
@@ -31,10 +34,12 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
 ]
@@ -56,4 +61,5 @@ morgan = "morgan:main"
 
 [tool.black]
 line-length = 80
-target-version = ['py37']
+skip-string-normalization = true
+target-version = ['py38']
