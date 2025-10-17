@@ -86,6 +86,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url="https://pypi.org/simple/",
             config=os.path.join(temp_index_path, "morgan.ini"),
+            package_type_regex="(whl|zip|tar.gz)",
             mirror_all_versions=False,
         )
 
@@ -104,6 +105,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            package_type_regex="(whl|zip|tar.gz)",
             mirror_all_versions=False,
         )
         mirrorer = Mirrorer(args)
@@ -127,6 +129,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            package_type_regex="(whl|zip|tar.gz)",
             mirror_all_versions=False,
         )
         mirrorer = Mirrorer(args)
