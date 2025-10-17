@@ -86,6 +86,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url="https://pypi.org/simple/",
             config=os.path.join(temp_index_path, "morgan.ini"),
+            enforce_unique_requirements=False,
         )
 
         mirrorer = Mirrorer(args)
@@ -102,6 +103,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            enforce_unique_requirements=False,
         )
         mirrorer = Mirrorer(args)
 
@@ -124,6 +126,7 @@ class TestMirrorer:
             index_path=temp_index_path,
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
+            enforce_unique_requirements=False,
         )
         mirrorer = Mirrorer(args)
 

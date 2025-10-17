@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, to_single_dash
+from morgan.utils import Cache, ListExtendingOrderedDict, to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -43,7 +43,12 @@ class Mirrorer:
         # into representations that are easier for the mirrorer to work with
         self.index_path = args.index_path
         self.index_url = args.index_url
-        self.config = configparser.ConfigParser()
+        if args.enforce_unique_requirements:
+            self.config = configparser.ConfigParser(strict=True)
+        else:
+            self.config = configparser.ConfigParser(
+                strict=False, dict_type=ListExtendingOrderedDict
+            )
         self.config.read(args.config)
         self.envs = {}
         self._supported_pyversions = []
@@ -555,6 +560,15 @@ def main():
         dest="skip_server_copy",
         action="store_true",
         help="Skip server copy in mirror command (default: False)",
+    )
+    parser.add_argument(
+        "--enforce-unique-requirements",
+        dest="enforce_unique_requirements",
+        action="store_true",
+        help=(
+            "Fail if a package appears more than once in the requirements section of a morgan.ini file "
+            "(default: accumulate all requirements)"
+        ),
     )
 
     server.add_arguments(parser)
