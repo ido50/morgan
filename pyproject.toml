@@ -55,5 +55,4 @@ path = "morgan/__about__.py"
 morgan = "morgan:main"
 
 [tool.black]
-line-length = 80
 target-version = ['py37']

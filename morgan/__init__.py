@@ -44,6 +44,7 @@ class Mirrorer:
         self.index_path = args.index_path
         self.index_url = args.index_url
         self.package_type_regex: str = args.package_type_regex
+        self.mirror_all_versions: bool = args.mirror_all_versions
         self.config = configparser.ConfigParser()
         self.config.read(args.config)
         self.envs = {}
@@ -163,7 +164,7 @@ class Mirrorer:
             raise Exception("Expected response to contain a list of 'files'")
 
         # filter and enrich files
-        files = self._filter_files(requirement, files)
+        files = self._filter_files(requirement, required_by, files)
         if files is None:
             if required_by is None:
                 raise Exception("No files match requirement")
@@ -197,6 +198,7 @@ class Mirrorer:
     def _filter_files(
         self,
         requirement: packaging.requirements.Requirement,
+        required_by: packaging.requirements.Requirement,
         files: Iterable[dict],
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
@@ -267,10 +269,11 @@ class Mirrorer:
             print(f"Skipping {requirement}, no file matches environments")
             return None
 
-        # Only keep files from the latest version that satisifies all
-        # specifiers and environments
-        latest_version = files[0]["version"]
-        files = list(filter(lambda file: file["version"] == latest_version, files))
+        # Only keep files from the latest version in case the package is a dependency of another
+        # otherwise, if it's a top-level package, make it dependent on the all_versions flag
+        if not self.mirror_all_versions or required_by is not None:
+            latest_version = files[0]["version"]
+            files = list(filter(lambda file: file["version"] == latest_version, files))
 
         return files
 
@@ -360,7 +363,11 @@ class Mirrorer:
         depdict = {}
         for dep in deps:
             dep.name = packaging.utils.canonicalize_name(dep.name)
-            depdict[dep.name] = {
+            # keep the index of the dictionary for the full requirement string to pull in potentially
+            # duplicate requirements like "mylibrary<2,>=1" and "mylibrary>=2,<3" that may come from different
+            # top-level requirements
+            dep_index = str(dep)
+            depdict[dep_index] = {
                 "requirement": dep,
                 "required_by": requirement,
             }
@@ -390,7 +397,12 @@ class Mirrorer:
 
         truehash = self._hash_file(target, hashalg)
         if truehash != exphash:
-            raise Exception("Digest mismatch for {}".format(fileinfo["filename"]))
+            os.remove(target)
+            raise ValueError(
+                "Digest mismatch for {}. Deleting file {}.".format(
+                    fileinfo["filename"], target
+                )
+            )
 
         return True
 
@@ -559,6 +571,18 @@ def main():
         default=r"(whl|zip|tar\.gz)",
         type=str,
         help="Regular expression to filter which package file types are mirrored",
+    )
+    parser.add_argument(
+        "-a",
+        "--mirror-all-versions",
+        dest="mirror_all_versions",
+        action="store_true",
+        help=(
+            "For packages listed in the [requirements] section, mirror every release "
+            "that matches their version specifiers. "
+            "Transitive dependencies still mirror only the latest matching release. "
+            "(Default: only the latest matching release)"
+        ),
     )
 
     server.add_arguments(parser)
