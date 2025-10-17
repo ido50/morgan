@@ -1,0 +1,18 @@
+---
+name: Python Linting
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: psf/black@af0ba72a73598c76189d6dd1b21d8532255d5942 # v25.9.0
