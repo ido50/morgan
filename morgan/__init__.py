@@ -10,7 +10,7 @@ import traceback
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Optional, Tuple
 
 import packaging.requirements
 import packaging.specifiers
@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, to_single_dash
+from morgan.utils import Cache, is_requirement_relevant, to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -125,8 +125,14 @@ class Mirrorer:
         self,
         requirement: packaging.requirements.Requirement,
         required_by: packaging.requirements.Requirement = None,
-    ) -> dict:
+    ) -> Optional[dict]:
         if self._processed_pkgs.check(requirement):
+            return None
+
+        # Check if requirement is relevant for any environment
+        if not is_requirement_relevant(requirement, self.envs.values()):
+            print(f"\tSkipping {requirement}, not relevant for any environment")
+            self._processed_pkgs.add(requirement)  # Mark as processed
             return None
 
         if required_by:
