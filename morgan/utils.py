@@ -1,4 +1,6 @@
 import re
+from collections import OrderedDict
+from typing import Dict, Iterable, Optional, Set
 
 from packaging.requirements import Requirement
 
@@ -42,3 +44,55 @@ class Cache:  # pylint: disable=protected-access
             if all(spec.operator in ('>', '>=') for spec in specifier._specs):
                 return True
         return False
+
+
+def is_requirement_relevant(
+    requirement: Requirement, envs: Iterable[Dict], extras: Optional[Set[str]] = None
+) -> bool:
+    """Determines if a requirement is relevant for any of the provided environments.
+
+    Args:
+        requirement: The requirement to evaluate.
+        envs: The environments to check against.
+        extras: Optional extras to consider during evaluation.
+
+    Returns:
+        True if the requirement has no marker or if its marker evaluates to
+        True for at least one environment, False otherwise.
+    """
+    if not requirement.marker:
+        return True
+
+    # If no environments specified, assume relevant
+    if not envs:
+        return True
+
+    for env in envs:
+        # Create a copy of the environment to avoid modifying the original
+        env_copy = env.copy()
+        env_copy.setdefault("extra", "")
+        if extras:
+            env_copy["extra"] = ",".join(extras)
+
+        if requirement.marker.evaluate(env_copy):
+            return True
+
+    return False
+
+
+def filter_relevant_requirements(
+    requirements: Iterable[Requirement],
+    envs: Iterable[Dict],
+    extras: Optional[Set[str]] = None,
+) -> Set[Requirement]:
+    """Filters a collection of requirements to only those relevant for the provided environments.
+
+    Args:
+        requirements: Requirements to filter.
+        envs: The environments to check against.
+        extras: Optional extras to consider during evaluation.
+
+    Returns:
+        Set of requirements relevant for at least one environment.
+    """
+    return {req for req in requirements if is_requirement_relevant(req, envs, extras)}
