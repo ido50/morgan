@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, to_single_dash
+from morgan.utils import Cache, to_single_dash, touch_file
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -386,6 +386,7 @@ class Mirrorer:
         if os.path.exists(target):
             truehash = self._hash_file(target, hashalg)
             if truehash == exphash:
+                touch_file(target, fileinfo)
                 return True
 
         print("\t{}...".format(fileinfo["url"]), end=" ")
@@ -402,6 +403,7 @@ class Mirrorer:
                 )
             )
 
+        touch_file(target, fileinfo)
         return True
 
     def _hash_file(self, filepath: str, hashalg: str) -> str:
