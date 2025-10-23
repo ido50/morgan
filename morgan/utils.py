@@ -1,7 +1,8 @@
+import os
 import re
-from collections import OrderedDict
 from typing import Dict, Iterable, Optional, Set
 
+import dateutil  # type: ignore[import-untyped]
 from packaging.requirements import Requirement
 
 
@@ -96,3 +97,13 @@ def filter_relevant_requirements(
         Set of requirements relevant for at least one environment.
     """
     return {req for req in requirements if is_requirement_relevant(req, envs, extras)}
+
+
+def touch_file(path: str, fileinfo: dict):
+    "upload-time: 2025-05-28T18:46:29.349478Z"
+    time_str = fileinfo.get("upload-time")
+    if not path or not time_str:
+        return
+    dt = dateutil.parser.parse(time_str)
+    ts = dt.timestamp()
+    os.utime(path, (ts, ts))
