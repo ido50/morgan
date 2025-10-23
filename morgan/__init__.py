@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, is_requirement_relevant, to_single_dash
+from morgan.utils import Cache, is_requirement_relevant, to_single_dash, touch_file
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -213,11 +213,7 @@ class Mirrorer:
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
         pattern: str = rf"\.{self.package_type_regex}$"
-        files = list(
-            filter(
-                lambda file: re.search(pattern, file["filename"]), files
-            )
-        )
+        files = list(filter(lambda file: re.search(pattern, file["filename"]), files))
 
         # parse versions and platform tags for each file
         for file in files:
@@ -396,6 +392,7 @@ class Mirrorer:
         if os.path.exists(target):
             truehash = self._hash_file(target, hashalg)
             if truehash == exphash:
+                touch_file(target, fileinfo)
                 return True
 
         print("\t{}...".format(fileinfo["url"]), end=" ")
@@ -412,6 +409,7 @@ class Mirrorer:
                 )
             )
 
+        touch_file(target, fileinfo)
         return True
 
     def _hash_file(self, filepath: str, hashalg: str) -> str:
@@ -573,18 +571,20 @@ def main():
         action="store_true",
         help="Skip server copy in mirror command (default: False)",
     )
-    parser.add_argument(
-        "-a",
-        "--mirror-all-versions",
-        dest="mirror_all_versions",
-        action="store_true",
-        help=(
-            "For packages listed in the [requirements] section, mirror every release "
-            "that matches their version specifiers. "
-            "Transitive dependencies still mirror only the latest matching release. "
-            "(Default: only the latest matching release)"
+    (
+        parser.add_argument(
+            "-a",
+            "--mirror-all-versions",
+            dest="mirror_all_versions",
+            action="store_true",
+            help=(
+                "For packages listed in the [requirements] section, mirror every release "
+                "that matches their version specifiers. "
+                "Transitive dependencies still mirror only the latest matching release. "
+                "(Default: only the latest matching release)"
+            ),
         ),
-    ),
+    )
     parser.add_argument(
         "--package-type-regex",
         dest="package_type_regex",
