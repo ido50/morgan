@@ -87,6 +87,7 @@ class TestMirrorer:
             index_url="https://pypi.org/simple/",
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            mirror_all_wheels=True,
         )
 
         mirrorer = Mirrorer(args)
@@ -105,6 +106,7 @@ class TestMirrorer:
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            mirror_all_wheels=True,
         )
         mirrorer = Mirrorer(args)
 
@@ -128,6 +130,7 @@ class TestMirrorer:
             index_url=PYPI_ADDRESS,
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
+            mirror_all_wheels=True,
         )
         mirrorer = Mirrorer(args)
 
@@ -176,6 +179,7 @@ class TestFilterFiles:
                 index_url="https://example.com/simple",
                 config=os.path.join(temp_index_path, "morgan.ini"),
                 mirror_all_versions=mirror_all_versions,
+                mirror_all_wheels=True,
             )
             return Mirrorer(args)
 
