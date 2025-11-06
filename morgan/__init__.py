@@ -230,9 +230,11 @@ class Mirrorer:
                     )
                     file["is_wheel"] = False
                     file["tags"] = None
-            except (packaging.version.InvalidVersion,
-                    packaging.utils.InvalidSdistFilename,
-                    packaging.utils.InvalidWheelFilename):
+            except (
+                packaging.version.InvalidVersion,
+                packaging.utils.InvalidSdistFilename,
+                packaging.utils.InvalidWheelFilename,
+            ):
                 # old versions
                 # expandvars-0.6.0-macosx-10.15-x86_64.tar.gz
 
@@ -296,7 +298,7 @@ class Mirrorer:
             # packaging.specifiers.SpecifierSet(req): Invalid specifier
             # gssapi: Invalid specifier: '>=3.6.*'
             # pyzmq: Invalid specifier: '!=3.0*'
-            req = fileinfo["requires-python"] = re.sub(r'([0-9])\.?\*', r'\1', req)
+            req = fileinfo["requires-python"] = re.sub(r"([0-9])\.?\*", r"\1", req)
             try:
                 spec_set = packaging.specifiers.SpecifierSet(req)
                 for supported_python in self._supported_pyversions:
@@ -315,7 +317,7 @@ class Mirrorer:
                 if intrp_name not in ("py", "cp"):
                     continue
 
-                intrp_set = packaging.specifiers.SpecifierSet(r'>=' + intrp_ver)
+                intrp_set = packaging.specifiers.SpecifierSet(r">=" + intrp_ver)
                 # As an example, cp38 seems to indicate CPython 3.8+, so we
                 # check if the version matches any of the supported Pythons, and
                 # only skip it if it does not match any.
@@ -326,11 +328,7 @@ class Mirrorer:
                     )
                 )
 
-                if (
-                    intrp_ver
-                    and intrp_ver != "3"
-                    and not intrp_ver_matched
-                ):
+                if intrp_ver and intrp_ver != "3" and not intrp_ver_matched:
                     continue
 
                 if tag.platform == "any":
