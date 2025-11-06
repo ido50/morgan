@@ -111,16 +111,16 @@ class TestMirrorer:
         mirrorer.copy_server()
 
         expected_serverpath = os.path.join(temp_index_path, "server.py")
-        assert os.path.exists(
-            expected_serverpath
-        ), "server.py should be copied to index_path"
+        assert os.path.exists(expected_serverpath), (
+            "server.py should be copied to index_path"
+        )
 
         with open(server.__file__, "rb") as original_server, open(
             expected_serverpath, "rb"
         ) as copied_server:
-            assert (
-                original_server.read() == copied_server.read()
-            ), "Copied file should match source"
+            assert original_server.read() == copied_server.read(), (
+                "Copied file should match source"
+            )
 
     def test_file_hashing(self, temp_index_path):
         args = argparse.Namespace(
@@ -145,9 +145,9 @@ class TestMirrorer:
         hash_file = test_file + ".hash"
         assert os.path.exists(hash_file), "Hash file should be created"
         with open(hash_file, "r", encoding="utf-8") as file:
-            assert (
-                file.read() == f"sha256={expected_hash}"
-            ), "Hash file content should be correctly formatted"
+            assert file.read() == f"sha256={expected_hash}", (
+                "Hash file content should be correctly formatted"
+            )
 
 
 class TestFilterFiles:
