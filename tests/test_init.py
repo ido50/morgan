@@ -6,7 +6,7 @@ import os
 import packaging.requirements
 import pytest
 
-from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server
+from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server, copy_server
 
 
 class TestParseInterpreter:
@@ -108,7 +108,7 @@ class TestMirrorer:
         )
         mirrorer = Mirrorer(args, args.config)
 
-        mirrorer.copy_server()
+        copy_server(args.index_path)
 
         expected_serverpath = os.path.join(temp_index_path, "server.py")
         assert os.path.exists(
