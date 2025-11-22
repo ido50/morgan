@@ -89,7 +89,7 @@ class TestMirrorer:
             mirror_all_versions=False,
         )
 
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
         assert mirrorer.index_path == temp_index_path
         assert mirrorer.index_url == "https://pypi.org/simple/"
@@ -106,7 +106,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
         )
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
         mirrorer.copy_server()
 
@@ -129,7 +129,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
         )
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
         test_data = b"test content for hashing"
         test_file = os.path.join(temp_index_path, "test_artifact.whl")
@@ -177,7 +177,7 @@ class TestFilterFiles:
                 config=os.path.join(temp_index_path, "morgan.ini"),
                 mirror_all_versions=mirror_all_versions,
             )
-            return Mirrorer(args)
+            return Mirrorer(args, args.config)
 
         return _make_mirrorer
 
