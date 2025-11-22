@@ -2,6 +2,7 @@ import json
 import re
 import urllib.parse
 import urllib.request
+from typing import Dict
 
 from packaging.requirements import Requirement
 
@@ -48,7 +49,7 @@ class Cache:  # pylint: disable=protected-access
 
 
 class RequestCache:  # pylint: disable=too-few-public-methods
-    d: dict[str, dict] = {}  # name: data
+    d: Dict[str, Dict] = {}  # name: data
 
     def get(self, url: str, name: str) -> dict:
         if name in self.d:
