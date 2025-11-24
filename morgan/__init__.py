@@ -20,13 +20,13 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import RCACHE, Cache, to_single_dash
+from morgan.utils import RCACHE, to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
 
 
-class Mirrorer:
+class Mirrorer:  # pylint: disable=too-few-public-methods
     """
     Mirrorer is a class that implements the mirroring capabilities of Morgan.
     A class is used to maintain state, as the mirrorer needs to keep track of
@@ -70,8 +70,6 @@ class Mirrorer:
                     )
                 )
 
-        self._processed_pkgs = Cache()
-
     def mirror(self, requirement_string: str):
         """
         Mirror a package according to a PEP 508-compliant requirement string.
@@ -106,9 +104,6 @@ class Mirrorer:
         requirement: packaging.requirements.Requirement,
         required_by: packaging.requirements.Requirement = None,
     ) -> dict:
-        if self._processed_pkgs.check(requirement):
-            return None
-
         if required_by:
             print("[{}]: {}".format(required_by, requirement))
         else:
@@ -156,8 +151,6 @@ class Mirrorer:
                 )
                 traceback.print_exc()
                 continue
-
-        self._processed_pkgs.add(requirement)
 
         return depdict
 
