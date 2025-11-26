@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import hashlib
+import inspect
 import json
 import os
 import os.path
@@ -10,7 +11,7 @@ import traceback
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable
 
 import packaging.requirements
 import packaging.specifiers
@@ -26,7 +27,7 @@ PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
 
 
-class Mirrorer:
+class Mirrorer:  # pylint: disable=too-few-public-methods
     """
     Mirrorer is a class that implements the mirroring capabilities of Morgan.
     A class is used to maintain state, as the mirrorer needs to keep track of
@@ -48,7 +49,7 @@ class Mirrorer:
         self.config.read(args.config)
         self.envs = {}
         self._supported_pyversions = []
-        self._supported_platforms = []
+        self.whl_tags = []  # list[(interpreter, abi, platform)]
         for key in self.config:
             m = re.fullmatch(r"env\.(.+)", key)
             if m:
@@ -62,13 +63,15 @@ class Mirrorer:
                     self._supported_pyversions.append(env["python_full_version"])
                 else:
                     self._supported_pyversions.append(env["python_version"])
-                if "platform_tag" in env:
-                    self._supported_platforms.append(re.compile(env["platform_tag"]))
-                self._supported_platforms.append(
-                    re.compile(
-                        r".*" + env["sys_platform"] + r".*" + env["platform_machine"]
-                    )
-                )
+                # whl.tag.*
+                l = []  # list[re.Pattern]
+                for i in ('interpreter', 'abi', 'platform'):
+                    t = env.get(f'whl.tag.{i}', '').strip()
+                    if t:
+                        l.append(re.compile(t))
+                    else:
+                        l.append(None)
+                self.whl_tags.append(l)
 
         self._processed_pkgs = Cache()
 
@@ -116,8 +119,6 @@ class Mirrorer:
             with open(serverpath, "rb") as inp, open(outpath, "wb") as out:
                 out.write(inp.read())
         else:
-            import inspect
-
             with open(outpath, "w") as out:
                 out.write(inspect.getsource(server))
 
@@ -172,7 +173,7 @@ class Mirrorer:
                 # for any of our environments and don't return an error
                 return None
 
-        if len(files) == 0:
+        if not files:
             raise Exception(f"No files match requirement {requirement}")
 
         # download all files
@@ -255,16 +256,16 @@ class Mirrorer:
                 )
             )
 
-        if len(files) == 0:
-            print(f"Skipping {requirement}, no version matches requirement")
+        if not files:
+            print(f"\tSkipping {requirement}, no version matches requirement")
             return None
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(filter(lambda file: self._matches_environments(file), files))
+        files = list(filter(self._matches_environments, files))
 
-        if len(files) == 0:
-            print(f"Skipping {requirement}, no file matches environments")
+        if not files:
+            print(f"\tSkipping {requirement}, no file matches environments")
             return None
 
         # Only keep files from the latest version in case the package is a dependency of another
@@ -276,7 +277,8 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python", None):
+        req = fileinfo.get("requires-python", None)
+        if req:
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
@@ -301,37 +303,11 @@ class Mirrorer:
                 return False
 
         if fileinfo.get("tags", None):
-            # At least one of the tags must match ALL of our environments
             for tag in fileinfo["tags"]:
-                (intrp_name, intrp_ver) = parse_interpreter(tag.interpreter)
-                if intrp_name not in ("py", "cp"):
-                    continue
-
-                intrp_set = packaging.specifiers.SpecifierSet(r'>=' + intrp_ver)
-                # As an example, cp38 seems to indicate CPython 3.8+, so we
-                # check if the version matches any of the supported Pythons, and
-                # only skip it if it does not match any.
-                intrp_ver_matched = any(
-                    map(
-                        lambda supported_python: intrp_set.contains(supported_python),
-                        self._supported_pyversions,
-                    )
-                )
-
-                if (
-                    intrp_ver
-                    and intrp_ver != "3"
-                    and not intrp_ver_matched
-                ):
-                    continue
-
-                if tag.platform == "any":
-                    return True
-                else:
-                    for platformre in self._supported_platforms:
-                        if platformre.fullmatch(tag.platform):
-                            # tag matched, accept this file
-                            return True
+                for t in self.whl_tags:
+                    t2 = zip(t[:3], [tag.interpreter, tag.abi, tag.platform])
+                    if all(i.match(j) for i, j in t2 if i):
+                        return True
 
             # none of the tags matched, reject this file
             return False
@@ -453,27 +429,6 @@ class Mirrorer:
         archive.close()
 
         return md
-
-
-def parse_interpreter(inp: str) -> Tuple[str, str]:
-    """
-    Parse interpreter tags in the name of a binary wheel file. Returns a tuple
-    of interpreter name and optional version, which will either be <major> or
-    <major>.<minor>.
-    """
-
-    m = re.fullmatch(r"^([^\d]+)(?:(\d)(?:[._])?(\d+)?)$", inp)
-    if m is None:
-        return (inp, None)
-
-    intr = m.group(1)
-    version = None
-    if m.lastindex > 1:
-        version = m.group(2)
-        if m.lastindex > 2:
-            version = "{}.{}".format(version, m.group(3))
-
-    return (intr, version)
 
 
 def parse_requirement(req_string: str) -> packaging.requirements.Requirement:
