@@ -6,35 +6,7 @@ import os
 import packaging.requirements
 import pytest
 
-from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server
-
-
-class TestParseInterpreter:
-    @pytest.mark.parametrize(
-        "interpreter_string, expected_name, expected_version",
-        [
-            ("cp38", "cp", "3.8"),
-            ("cp3", "cp", "3"),
-            ("cp310", "cp", "3.10"),
-            ("cp3_10", "cp", "3.10"),
-            ("py38", "py", "3.8"),
-            ("something_strange", "something_strange", None),
-        ],
-        ids=[
-            "typical_cpython",
-            "cpython_no_minor_version",
-            "cpython_two_digit_minor",
-            "cpython_with_underscore",
-            "generic_python",
-            "unrecognized_format",
-        ],
-    )
-    def test_parse_interpreter_components(
-        self, interpreter_string, expected_name, expected_version
-    ):
-        name, version = parse_interpreter(interpreter_string)
-        assert name == expected_name
-        assert version == expected_version
+from morgan import PYPI_ADDRESS, Mirrorer, parse_requirement, server
 
 
 class TestParseRequirement:
@@ -71,9 +43,9 @@ class TestMirrorer:
                 """
                 [env.test_env]
                 python_version = 3.10
-                sys_platform = linux
-                platform_machine = x86_64
-                platform_tag = manylinux
+                whl.tag.interpreter = (cp310|py3)$
+                whl.tag.abi = (cp310|cp310t|abi3|none)$
+                whl.tag.platform = (manylinux.*_x86_64|any)$
 
                 [requirements]
                 requests = >=2.0.0
@@ -95,8 +67,9 @@ class TestMirrorer:
         assert mirrorer.index_url == "https://pypi.org/simple/"
         assert "test_env" in mirrorer.envs
         assert mirrorer.envs["test_env"]["python_version"] == "3.10"
-        assert mirrorer.envs["test_env"]["sys_platform"] == "linux"
-        assert mirrorer.envs["test_env"]["platform_machine"] == "x86_64"
+        assert mirrorer.envs["test_env"]["whl.tag.interpreter"] == "(cp310|py3)$"
+        assert mirrorer.envs["test_env"]["whl.tag.abi"] == "(cp310|cp310t|abi3|none)$"
+        assert mirrorer.envs["test_env"]["whl.tag.platform"] == "(manylinux.*_x86_64|any)$"
         assert not mirrorer.mirror_all_versions
 
     def test_server_file_copying(self, temp_index_path):
