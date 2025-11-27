@@ -276,8 +276,9 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python", None):
-            # The Python versions in all of our environments must be supported
+        req = fileinfo.get("requires-python", None)
+        if req:
+            # The Python versions in some of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
             # number (e.g. '3') instead of an actual specifier (e.g. '>=3'),
@@ -291,12 +292,9 @@ class Mirrorer:
             req = fileinfo["requires-python"] = re.sub(r'([0-9])\.?\*', r'\1', req)
             try:
                 spec_set = packaging.specifiers.SpecifierSet(req)
-                for supported_python in self._supported_pyversions:
-                    if not spec_set.contains(supported_python):
-                        # file does not support the Python version of one of our
-                        # environments, reject it
-                        return False
-            except Exception as e:
+                if not any(spec_set.contains(i) for i in self._supported_pyversions):
+                    return False
+            except packaging.specifiers.InvalidSpecifier as e:
                 print(f"\tIgnoring {fileinfo['filename']}: {e}")
                 return False
 
