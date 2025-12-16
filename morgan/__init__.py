@@ -1,7 +1,7 @@
 import argparse
 import configparser
 import hashlib
-import json
+import inspect
 import os
 import os.path
 import re
@@ -20,13 +20,13 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, to_single_dash
+from morgan.utils import RCACHE, Cache, to_single_dash
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
 
 
-class Mirrorer:
+class Mirrorer:  # pylint: disable=too-few-public-methods
     """
     Mirrorer is a class that implements the mirroring capabilities of Morgan.
     A class is used to maintain state, as the mirrorer needs to keep track of
@@ -34,7 +34,7 @@ class Mirrorer:
     them again as dependencies.
     """
 
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: argparse.Namespace, config: str):
         """
         The constructor only needs to path to the package index.
         """
@@ -45,7 +45,7 @@ class Mirrorer:
         self.index_url = args.index_url
         self.mirror_all_versions: bool = args.mirror_all_versions
         self.config = configparser.ConfigParser()
-        self.config.read(args.config)
+        self.config.read(config)
         self.envs = {}
         self._supported_pyversions = []
         self._supported_platforms = []
@@ -101,26 +101,6 @@ class Mirrorer:
                     next_deps.update(more_deps)
             deps = next_deps.copy()
 
-    def copy_server(self):
-        """
-        Copy the server script to the package index. This method will first
-        attempt to find the server file directly, and if that fails, it will
-        use the inspect module to get the source code.
-        """
-
-        print("Copying server script")
-        thispath = os.path.realpath(__file__)
-        serverpath = os.path.join(os.path.dirname(thispath), "server.py")
-        outpath = os.path.join(self.index_path, "server.py")
-        if os.path.exists(serverpath):
-            with open(serverpath, "rb") as inp, open(outpath, "wb") as out:
-                out.write(inp.read())
-        else:
-            import inspect
-
-            with open(outpath, "w") as out:
-                out.write(inspect.getsource(server))
-
     def _mirror(
         self,
         requirement: packaging.requirements.Requirement,
@@ -134,33 +114,10 @@ class Mirrorer:
         else:
             print("{}".format(requirement))
 
-        data: dict = None
-
-        # get information about this package from the Simple API in JSON
-        # format as per PEP 691
-        request = urllib.request.Request(
-            "{}{}/".format(self.index_url, requirement.name),
-            headers={
-                "Accept": "application/vnd.pypi.simple.v1+json",
-            },
-        )
-
-        response_url = ""
-        with urllib.request.urlopen(request) as response:
-            data = json.load(response)
-            response_url = str(response.url)
-
-        # check metadata version ~1.0
-        v_str = data["meta"]["api-version"]
-        if not v_str:
-            v_str = "1.0"
-        v_int = [int(i) for i in v_str.split(".")[:2]]
-        if v_int[0] != 1:
-            raise Exception(f"Unsupported metadata version {v_str}, only support 1.x")
+        data: dict = RCACHE.get(self.index_url, requirement.name)
+        response_url = data['response_url']
 
         files = data["files"]
-        if files is None or not isinstance(files, list):
-            raise Exception("Expected response to contain a list of 'files'")
 
         # filter and enrich files
         files = self._filter_files(requirement, required_by, files)
@@ -172,7 +129,7 @@ class Mirrorer:
                 # for any of our environments and don't return an error
                 return None
 
-        if len(files) == 0:
+        if not files:
             raise Exception(f"No files match requirement {requirement}")
 
         # download all files
@@ -200,51 +157,6 @@ class Mirrorer:
         required_by: packaging.requirements.Requirement,
         files: Iterable[dict],
     ) -> Iterable[dict]:
-        # remove files with unsupported extensions
-        files = list(
-            filter(
-                lambda file: re.search(r"\.(whl|zip|tar.gz)$", file["filename"]), files
-            )
-        )
-
-        # parse versions and platform tags for each file
-        for file in files:
-            try:
-                if re.search(r"\.whl$", file["filename"]):
-                    _, file["version"], ___, file["tags"] = (
-                        packaging.utils.parse_wheel_filename(file["filename"])
-                    )
-                    file["is_wheel"] = True
-                elif re.search(r"\.(tar\.gz|zip)$", file["filename"]):
-                    _, file["version"] = packaging.utils.parse_sdist_filename(
-                        # fix: selenium-2.0-dev-9429.tar.gz -> 9429
-                        to_single_dash(file["filename"])
-                    )
-                    file["is_wheel"] = False
-                    file["tags"] = None
-            except (packaging.version.InvalidVersion,
-                    packaging.utils.InvalidSdistFilename,
-                    packaging.utils.InvalidWheelFilename):
-                # old versions
-                # expandvars-0.6.0-macosx-10.15-x86_64.tar.gz
-
-                # ignore files with invalid version, PyPI no longer allows
-                # packages with special versioning schemes, and we assume we
-                # can ignore such files
-                continue
-            except Exception:
-                print("\tSkipping file {}, exception caught".format(file["filename"]))
-                traceback.print_exc()
-                continue
-
-        # sort all files by version in reverse order, and ignore yanked files
-        files = list(
-            filter(
-                lambda file: "version" in file and not file.get("yanked", False), files
-            )
-        )
-        files.sort(key=lambda file: file["version"], reverse=True)
-
         # keep only files of the latest version that satisfies the
         # requirement (if requirement doesn't have any version specifiers,
         # take latest available version)
@@ -255,15 +167,15 @@ class Mirrorer:
                 )
             )
 
-        if len(files) == 0:
+        if not files:
             print(f"Skipping {requirement}, no version matches requirement")
             return None
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(filter(lambda file: self._matches_environments(file), files))
+        files = list(filter(self._matches_environments, files))
 
-        if len(files) == 0:
+        if not files:
             print(f"Skipping {requirement}, no file matches environments")
             return None
 
@@ -276,7 +188,8 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python", None):
+        req = fileinfo.get("requires-python", None)
+        if req:
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
@@ -312,10 +225,7 @@ class Mirrorer:
                 # check if the version matches any of the supported Pythons, and
                 # only skip it if it does not match any.
                 intrp_ver_matched = any(
-                    map(
-                        lambda supported_python: intrp_set.contains(supported_python),
-                        self._supported_pyversions,
-                    )
+                    map(intrp_set.contains, self._supported_pyversions)
                 )
 
                 if (
@@ -495,25 +405,48 @@ def mirror(args: argparse.Namespace):
     times on the same index path, files are only downloaded if necessary.
     """
 
-    m = Mirrorer(args)
-    for package in m.config["requirements"]:
-        reqs = m.config["requirements"][package].splitlines()
-        if not reqs:
-            # empty requirements
-            # morgan =
-            m.mirror(f"{package}")
-        else:
-            # multiline requirements
-            # urllib3 =
-            #   <1.27
-            #   >=2
-            #   [brotli]
-            for req in reqs:
-                req = req.strip()
-                m.mirror(f"{package}{req}")
+    for c in args.config:
+        print('-----------------------------------------------')
+        print(f'config: {c}')
+        print('-----------------------------------------------')
+        m = Mirrorer(args, c)
+        for package in m.config["requirements"]:
+            reqs = m.config["requirements"][package].splitlines()
+            if not reqs:
+                # empty requirements
+                # morgan =
+                m.mirror(f"{package}")
+            else:
+                # multiline requirements
+                # urllib3 =
+                #   <1.27
+                #   >=2
+                #   [brotli]
+                for req in reqs:
+                    req = req.strip()
+                    m.mirror(f"{package}{req}")
 
     if not args.skip_server_copy:
-        m.copy_server()
+        copy_server(args.index_path)
+
+
+def copy_server(index_path: str):
+    """
+    Copy the server script to the package index. This method will first
+    attempt to find the server file directly, and if that fails, it will
+    use the inspect module to get the source code.
+    """
+
+    print("Copying server script")
+    thispath = os.path.realpath(__file__)
+    serverpath = os.path.join(os.path.dirname(thispath), "server.py")
+    outpath = os.path.join(index_path, "server.py")
+    if os.path.exists(serverpath):
+        with open(serverpath, "rb") as inp, open(outpath, "wb") as out:
+            out.write(inp.read())
+    else:
+        with open(outpath, "w") as out:
+            out.write(inspect.getsource(server))
 
 
 def main():
@@ -550,12 +483,14 @@ def main():
         type=my_url,
         help="Base URL of the Python Package Index",
     )
+
+    # one request cache for all configs
     parser.add_argument(
         "-c",
         "--config",
         dest="config",
-        nargs="?",
-        help="Config file (default: <INDEX_PATH>/morgan.ini)",
+        nargs="*",
+        help="Config files (default: <INDEX_PATH>/morgan.ini)",
     )
     parser.add_argument(
         "--skip-server-copy",
@@ -610,16 +545,19 @@ def main():
         return
 
     if not args.config:
-        args.config = os.path.join(args.index_path, "morgan.ini")
-    if not os.path.isfile(args.config):
-        # If a file named in filenames cannot be opened, that file will be ignored
-        # https://docs.python.org/3.12/library/configparser.html#configparser.ConfigParser.read
-        raise argparse.ArgumentTypeError(f"Invalid config: {args.config}")
+        args.config = [
+            os.path.join(args.index_path, "morgan.ini"),
+        ]
+    for c in args.config:
+        if not os.path.isfile(c):
+            # If a file named in filenames cannot be opened, that file will be ignored
+            # https://docs.python.org/3.12/library/configparser.html#configparser.ConfigParser.read
+            raise argparse.ArgumentTypeError(f"Invalid config: {c}")
 
     if args.command == "mirror":
         mirror(args)
     elif args.command == "copy_server":
-        Mirrorer(args).copy_server()
+        copy_server(args.index_path)
 
 
 if __name__ == "__main__":

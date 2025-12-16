@@ -6,7 +6,8 @@ import os
 import packaging.requirements
 import pytest
 
-from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server
+from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server, copy_server
+from morgan.utils import enrich_files
 
 
 class TestParseInterpreter:
@@ -89,7 +90,7 @@ class TestMirrorer:
             mirror_all_versions=False,
         )
 
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
         assert mirrorer.index_path == temp_index_path
         assert mirrorer.index_url == "https://pypi.org/simple/"
@@ -106,9 +107,9 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
         )
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
-        mirrorer.copy_server()
+        copy_server(args.index_path)
 
         expected_serverpath = os.path.join(temp_index_path, "server.py")
         assert os.path.exists(
@@ -129,7 +130,7 @@ class TestMirrorer:
             config=os.path.join(temp_index_path, "morgan.ini"),
             mirror_all_versions=False,
         )
-        mirrorer = Mirrorer(args)
+        mirrorer = Mirrorer(args, args.config)
 
         test_data = b"test content for hashing"
         test_file = os.path.join(temp_index_path, "test_artifact.whl")
@@ -177,7 +178,7 @@ class TestFilterFiles:
                 config=os.path.join(temp_index_path, "morgan.ini"),
                 mirror_all_versions=mirror_all_versions,
             )
-            return Mirrorer(args)
+            return Mirrorer(args, args.config)
 
         return _make_mirrorer
 
@@ -195,12 +196,12 @@ class TestFilterFiles:
 
     @pytest.fixture
     def sample_files(self):
-        return [
+        return enrich_files([
             self.make_file("sample_package-1.6.0.tar.gz"),
             self.make_file("sample_package-1.5.2.tar.gz"),
             self.make_file("sample_package-1.5.1.tar.gz"),
             self.make_file("sample_package-1.4.9.tar.gz"),
-        ]
+        ])
 
     @staticmethod
     def extract_versions(files):
