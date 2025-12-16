@@ -26,7 +26,7 @@ PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
 
 
-class Mirrorer:
+class Mirrorer:  # pylint: disable=too-few-public-methods
     """
     Mirrorer is a class that implements the mirroring capabilities of Morgan.
     A class is used to maintain state, as the mirrorer needs to keep track of
@@ -117,17 +117,7 @@ class Mirrorer:
         data: dict = RCACHE.get(self.index_url, requirement.name)
         response_url = data['response_url']
 
-        # check metadata version ~1.0
-        v_str = data["meta"]["api-version"]
-        if not v_str:
-            v_str = "1.0"
-        v_int = [int(i) for i in v_str.split(".")[:2]]
-        if v_int[0] != 1:
-            raise Exception(f"Unsupported metadata version {v_str}, only support 1.x")
-
         files = data["files"]
-        if files is None or not isinstance(files, list):
-            raise Exception("Expected response to contain a list of 'files'")
 
         # filter and enrich files
         files = self._filter_files(requirement, required_by, files)
@@ -167,51 +157,6 @@ class Mirrorer:
         required_by: packaging.requirements.Requirement,
         files: Iterable[dict],
     ) -> Iterable[dict]:
-        # remove files with unsupported extensions
-        files = list(
-            filter(
-                lambda file: re.search(r"\.(whl|zip|tar.gz)$", file["filename"]), files
-            )
-        )
-
-        # parse versions and platform tags for each file
-        for file in files:
-            try:
-                if re.search(r"\.whl$", file["filename"]):
-                    _, file["version"], ___, file["tags"] = (
-                        packaging.utils.parse_wheel_filename(file["filename"])
-                    )
-                    file["is_wheel"] = True
-                elif re.search(r"\.(tar\.gz|zip)$", file["filename"]):
-                    _, file["version"] = packaging.utils.parse_sdist_filename(
-                        # fix: selenium-2.0-dev-9429.tar.gz -> 9429
-                        to_single_dash(file["filename"])
-                    )
-                    file["is_wheel"] = False
-                    file["tags"] = None
-            except (packaging.version.InvalidVersion,
-                    packaging.utils.InvalidSdistFilename,
-                    packaging.utils.InvalidWheelFilename):
-                # old versions
-                # expandvars-0.6.0-macosx-10.15-x86_64.tar.gz
-
-                # ignore files with invalid version, PyPI no longer allows
-                # packages with special versioning schemes, and we assume we
-                # can ignore such files
-                continue
-            except Exception:
-                print("\tSkipping file {}, exception caught".format(file["filename"]))
-                traceback.print_exc()
-                continue
-
-        # sort all files by version in reverse order, and ignore yanked files
-        files = list(
-            filter(
-                lambda file: "version" in file and not file.get("yanked", False), files
-            )
-        )
-        files.sort(key=lambda file: file["version"], reverse=True)
-
         # keep only files of the latest version that satisfies the
         # requirement (if requirement doesn't have any version specifiers,
         # take latest available version)
