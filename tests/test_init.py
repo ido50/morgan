@@ -7,6 +7,7 @@ import packaging.requirements
 import pytest
 
 from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement, server, copy_server
+from morgan.utils import enrich_files
 
 
 class TestParseInterpreter:
@@ -195,12 +196,12 @@ class TestFilterFiles:
 
     @pytest.fixture
     def sample_files(self):
-        return [
+        return enrich_files([
             self.make_file("sample_package-1.6.0.tar.gz"),
             self.make_file("sample_package-1.5.2.tar.gz"),
             self.make_file("sample_package-1.5.1.tar.gz"),
             self.make_file("sample_package-1.4.9.tar.gz"),
-        ]
+        ])
 
     @staticmethod
     def extract_versions(files):
