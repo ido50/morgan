@@ -78,7 +78,7 @@ pytest>=6.0.0
     def test_parse_metadata_file(self, parser, metadata_content):
         """Test parsing a metadata file with dependencies"""
         mock_fp = io.BytesIO(metadata_content)
-        # noqa: SLF001 # pylint: disable=W0212
+        # pylint: disable=W0212
         parser._parse_metadata_file(mock_fp)
 
         assert parser.name == "example-package"
@@ -115,7 +115,7 @@ pytest>=6.0.0
                 },
             },
         ):
-            # noqa: SLF001 # pylint: disable=W0212
+            # pylint: disable=W0212
             parser._parse_pyproject(mock_fp)
 
         assert parser.name == "example-package"
@@ -137,7 +137,7 @@ pytest>=6.0.0
         mock_fp = io.BytesIO(requires_txt_content)
         mock_fp.name = "package.egg-info/requires.txt"  # Not setup_requires.txt
 
-        # noqa: SLF001 # pylint: disable=W0212
+        # pylint: disable=W0212
         parser._parse_requirestxt(mock_fp)
 
         assert len(parser.core_dependencies) == 2

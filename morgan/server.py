@@ -37,7 +37,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(
                 b"The server cannot generate a response "
-                + b"in any of the requested MIME types"
+                b"in any of the requested MIME types"
             )
             return
 
@@ -100,7 +100,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         path = pathlib.Path(index_path, project)
         if not path.exists() or not path.is_dir():
-            self._serve_notfound("No such project {}".format(project))
+            self._serve_notfound(f"No such project {project}")
             return
 
         files = []
@@ -109,14 +109,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 if re.search(r"\.(whl|zip|tar\.gz)$", entry.name):
                     file = {
                         "filename": entry.name,
-                        "url": "/{}/{}".format(project, entry.name),
+                        "url": f"/{project}/{entry.name}",
                         "hashes": {},
                     }
 
                     # read file hash
-                    hashfile = path.joinpath("{}.hash".format(entry.name))
+                    hashfile = path.joinpath(f"{entry.name}.hash")
                     if hashfile.exists():
-                        with open(hashfile, "r") as hf:
+                        with open(hashfile) as hf:
                             data = hf.read().strip().split("=")
                             file["hashes"][data[0]] = data[1]
 
@@ -124,7 +124,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                     file["dist-info-metadata"] = (
                         False
                         if no_metadata
-                        else path.joinpath("{}.metadata".format(entry.name)).exists()
+                        else path.joinpath(f"{entry.name}.metadata").exists()
                     )
 
                     files.append(file)
@@ -174,11 +174,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         path = pathlib.Path(index_path, project, filename)
         if not path.exists() or not path.is_file():
-            self._serve_notfound("No such project {}".format(project))
+            self._serve_notfound(f"No such project {project}")
             return
 
         if no_metadata and re.search(r"\.metadata$", filename):
-            self._serve_notfound("No such file {}".format(filename))
+            self._serve_notfound(f"No such file {filename}")
             return
 
         ct = "text/plain"

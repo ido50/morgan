@@ -149,16 +149,16 @@ class Mirrorer:
             return None
 
         if required_by:
-            print("[{}]: {}".format(required_by, requirement))
+            print(f"[{required_by}]: {requirement}")
         else:
-            print("{}".format(requirement))
+            print(f"{requirement}")
 
         data: dict = None
 
         # get information about this package from the Simple API in JSON
         # format as per PEP 691
         request = urllib.request.Request(
-            "{}{}/".format(self.index_url, requirement.name),
+            f"{self.index_url}{requirement.name}/",
             headers={
                 "Accept": "application/vnd.pypi.simple.v1+json",
             },
@@ -186,10 +186,9 @@ class Mirrorer:
         if files is None:
             if required_by is None:
                 raise Exception("No files match requirement")
-            else:
-                # this is a dependency, assume the dependency is not relevant
-                # for any of our environments and don't return an error
-                return None
+            # this is a dependency, assume the dependency is not relevant
+            # for any of our environments and don't return an error
+            return None
 
         if len(files) == 0:
             raise Exception(f"No files match requirement {requirement}")
@@ -294,7 +293,7 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python", None):
+        if req := fileinfo.get("requires-python"):
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
@@ -318,7 +317,7 @@ class Mirrorer:
                 print(f"\tIgnoring {fileinfo['filename']}: {e}")
                 return False
 
-        if fileinfo.get("tags", None):
+        if fileinfo.get("tags"):
             # At least one of the tags must match ALL of our environments
             for tag in fileinfo["tags"]:
                 (intrp_name, intrp_ver) = parse_interpreter(tag.interpreter)
@@ -341,11 +340,10 @@ class Mirrorer:
 
                 if tag.platform == "any":
                     return True
-                else:
-                    for platformre in self._supported_platforms:
-                        if platformre.fullmatch(tag.platform):
-                            # tag matched, accept this file
-                            return True
+                for platformre in self._supported_platforms:
+                    if platformre.fullmatch(tag.platform):
+                        # tag matched, accept this file
+                        return True
 
             # none of the tags matched, reject this file
             return False
@@ -429,8 +427,8 @@ class Mirrorer:
         truehash = hashlib.new(hashalg)
         truehash.update(contents)
 
-        with open("{}.hash".format(filepath), "w") as out:
-            out.write("{}={}".format(hashalg, truehash.hexdigest()))
+        with open(f"{filepath}.hash", "w") as out:
+            out.write(f"{hashalg}={truehash.hexdigest()}")
 
         return truehash.hexdigest()
 
@@ -455,16 +453,16 @@ class Mirrorer:
             members = [member.name for member in archive.getmembers()]
             opener = archive.extractfile
         else:
-            raise Exception("Unexpected distribution file {}".format(filepath))
+            raise Exception(f"Unexpected distribution file {filepath}")
 
         for member in members:
             try:
                 md.parse(opener, member)
             except Exception as e:
-                print("Failed parsing member {} of {}: {}".format(member, filepath, e))
+                print(f"Failed parsing member {member} of {filepath}: {e}")
 
         if md.seen_metadata_file():
-            md.write_metadata_file("{}.metadata".format(filepath))
+            md.write_metadata_file(f"{filepath}.metadata")
 
         archive.close()
 
@@ -487,7 +485,7 @@ def parse_interpreter(inp: str) -> Tuple[str, str]:
     if m.lastindex > 1:
         version = m.group(2)
         if m.lastindex > 2:
-            version = "{}.{}".format(version, m.group(3))
+            version = f"{version}.{m.group(3)}"
 
     return (intr, version)
 
@@ -624,14 +622,14 @@ def main():
     if args.command == "generate_env":
         configurator.generate_env(args.env)
         return
-    elif args.command == "generate_reqs":
+    if args.command == "generate_reqs":
         configurator.generate_reqs(args.mode)
         return
-    elif args.command == "serve":
+    if args.command == "serve":
         server.run(args.index_path, args.host, args.port, args.no_metadata)
         return
-    elif args.command == "version":
-        print("Morgan v{}".format(__version__))
+    if args.command == "version":
+        print(f"Morgan v{__version__}")
         return
 
     if not args.config:

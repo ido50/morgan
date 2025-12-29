@@ -1,17 +1,17 @@
 import argparse
-from collections import OrderedDict
 import configparser
 import os
 import platform
 import sys
 import sysconfig
+from collections import OrderedDict
 
 from packaging.version import Version
 
 if Version(platform.python_version()) < Version("3.8"):
     import importlib_metadata as metadata
 else:
-    import importlib.metadata as metadata
+    from importlib import metadata
 
 
 def generate_env(name: str = "local"):
@@ -23,7 +23,7 @@ def generate_env(name: str = "local"):
     """
 
     config = configparser.ConfigParser()
-    config["env.{}".format(name)] = {
+    config[f"env.{name}"] = {
         "os_name": os.name,
         "platform_tag": sysconfig.get_platform(),
         "sys_platform": sys.platform,

@@ -254,7 +254,7 @@ Morgan was written because of insufficiencies of other mirroring solutions:
   from PyPI at regular intervals. It also has many non-standard-library
   dependencies.
 - [pypickup](https://github.com/UB-Quantic/pypickup) was started around the same time as Morgan. It is more fitting for
-  and offline mirror than the above three but takes a different approach than Morgan. It
+  an offline mirror than the above three but takes a different approach than Morgan. It
   doesn't include a server, instead relying on `pip`'s ability to install from
   a directory tree, so this tree needs to be accessible to your servers. It also
   favors CLI commands over a configuration file (e.g. an `add` command is used to

@@ -1,13 +1,14 @@
 import email.parser
 import re
-from typing import Dict, Set, Callable, BinaryIO, Iterable
+from typing import BinaryIO, Callable, Dict, Iterable, Set
 
-from packaging.version import Version
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
-from packaging.specifiers import SpecifierSet
-from packaging.markers import Marker, Variable as MarkerVariable
 import tomli
+from packaging.markers import Marker
+from packaging.markers import Variable as MarkerVariable
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
+from packaging.utils import canonicalize_name
+from packaging.version import Version
 
 from morgan.utils import filter_relevant_requirements
 

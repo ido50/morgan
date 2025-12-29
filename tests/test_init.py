@@ -79,7 +79,7 @@ class TestMirrorer:
                 requests = >=2.0.0
                 """
             )
-        yield tmpdir
+        return tmpdir
 
     def test_mirrorer_initialization(self, temp_index_path):
         args = argparse.Namespace(
@@ -141,13 +141,13 @@ class TestMirrorer:
 
         expected_hash = hashlib.sha256(test_data).hexdigest()
 
-        # noqa: SLF001 # pylint: disable=W0212
+        # pylint: disable=W0212
         digest = mirrorer._hash_file(test_file, "sha256")
 
         assert digest == expected_hash, "Returned hash should match sha256 digest"
         hash_file = test_file + ".hash"
         assert os.path.exists(hash_file), "Hash file should be created"
-        with open(hash_file, "r", encoding="utf-8") as file:
+        with open(hash_file, encoding="utf-8") as file:
             assert file.read() == f"sha256={expected_hash}", (
                 "Hash file content should be correctly formatted"
             )
@@ -168,7 +168,7 @@ class TestFilterFiles:
                 platform_tag = manylinux
                 """
             )
-        yield tmp_path
+        return tmp_path
 
     @pytest.fixture
     def make_mirrorer(self, temp_index_path):
@@ -179,7 +179,7 @@ class TestFilterFiles:
                 index_url="https://example.com/simple",
                 config=os.path.join(temp_index_path, "morgan.ini"),
                 mirror_all_versions=mirror_all_versions,
-                package_type_regex=r"(whl|zip|tar\.gz)"
+                package_type_regex=r"(whl|zip|tar\.gz)",
             )
             return Mirrorer(args)
 
@@ -229,12 +229,12 @@ class TestFilterFiles:
         """Test that file filtering correctly handles different version specifications."""
         mirrorer = make_mirrorer(
             mirror_all_versions=True,
-            )
+        )
         requirement = packaging.requirements.Requirement(
             f"sample_package{version_spec}"
         )
 
-        # noqa: SLF001 # pylint: disable=W0212
+        # pylint: disable=W0212
         filtered_files = mirrorer._filter_files(
             requirement=requirement, required_by=None, files=sample_files
         )
@@ -260,7 +260,7 @@ class TestFilterFiles:
             f"sample_package{version_spec}"
         )
 
-        # noqa: SLF001 # pylint: disable=W0212
+        # pylint: disable=W0212
         filtered_files = mirrorer._filter_files(
             requirement=requirement, required_by=None, files=sample_files
         )
