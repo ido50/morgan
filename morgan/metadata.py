@@ -111,7 +111,9 @@ class MetadataParser:
             if re.fullmatch(r"[^/]+/PKG-INFO", filename):
                 parse_func = self._parse_metadata_file
                 main_metadata_file = True
-            elif re.fullmatch(r"[^/]+(/[^/]+)?\.egg-info/(setup_)?requires.txt", filename):
+            elif re.fullmatch(
+                r"[^/]+(/[^/]+)?\.egg-info/(setup_)?requires.txt", filename
+            ):
                 parse_func = self._parse_requirestxt
             elif re.fullmatch(r"[^/]+/pyproject.toml", filename):
                 parse_func = self._parse_pyproject
@@ -143,11 +145,7 @@ class MetadataParser:
         with open(target, "wb") as out:
             out.write(self._metadata_file)
 
-    def dependencies(
-        self,
-        extras: Set[str],
-        envs: Iterable[Dict]
-    ) -> Set[Requirement]:
+    def dependencies(self, extras: Set[str], envs: Iterable[Dict]) -> Set[Requirement]:
         """
         Resolves the dependencies of the package, returning a set of
         requirements. Only requirements that are relevant to the provided extras
@@ -215,8 +213,7 @@ class MetadataParser:
     def _add_optional_requirements(self, extra, reqs):
         if extra not in self.optional_dependencies:
             self.optional_dependencies[extra] = set()
-        self.optional_dependencies[extra] |= set(
-            [Requirement(dep) for dep in reqs])
+        self.optional_dependencies[extra] |= set([Requirement(dep) for dep in reqs])
 
     def _parse_pyproject(self, fp):
         data = tomli.load(fp)
@@ -232,8 +229,7 @@ class MetadataParser:
                 self.version = Version(version)
 
             if "requires-python" in project:
-                self.python_requirement = SpecifierSet(
-                    project["requires-python"])
+                self.python_requirement = SpecifierSet(project["requires-python"])
 
             if "dependencies" in project:
                 self._add_core_requirements(project["dependencies"])
@@ -241,19 +237,23 @@ class MetadataParser:
             if "optional-dependencies" in project:
                 for extra in project["optional-dependencies"]:
                     self._add_optional_requirements(
-                        extra, project["optional-dependencies"][extra])
+                        extra, project["optional-dependencies"][extra]
+                    )
 
         build_system = data.get("build-system")
         if build_system is not None and "requires" in build_system:
             self.build_dependencies |= set(
-                [Requirement(req) for req in build_system["requires"]])
+                [Requirement(req) for req in build_system["requires"]]
+            )
 
     def _parse_metadata_file(self, fp):
         data = email.parser.BytesParser().parse(fp, True)
 
-        (name, version, metadata_version) = (data.get("Name"),
-                                             data.get("Version"),
-                                             data.get("Metadata-Version"))
+        (name, version, metadata_version) = (
+            data.get("Name"),
+            data.get("Version"),
+            data.get("Metadata-Version"),
+        )
         if metadata_version is None:
             return
 
@@ -288,8 +288,10 @@ class MetadataParser:
                 extra = None
                 if req.marker is not None:
                     for marker in req.marker._markers:
-                        if isinstance(marker[0], MarkerVariable) and \
-                                marker[0].value == "extra":
+                        if (
+                            isinstance(marker[0], MarkerVariable)
+                            and marker[0].value == "extra"
+                        ):
                             extra = marker[2].value
                             break
 

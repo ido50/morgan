@@ -20,7 +20,7 @@ import packaging.version
 
 from morgan import configurator, metadata, server
 from morgan.__about__ import __version__
-from morgan.utils import Cache, ListExtendingOrderedDict, to_single_dash
+from morgan.utils import Cache, ListExtendingOrderedDict, to_single_dash, touch_file
 
 PYPI_ADDRESS = "https://pypi.org/simple/"
 PREFERRED_HASH_ALG = "sha256"
@@ -48,6 +48,7 @@ class Mirrorer:
             strict=False, dict_type=ListExtendingOrderedDict
         )
         self.config.read(args.config)
+        self.package_type_regex: str = args.package_type_regex
         self.envs = {}
         self._supported_pyversions = []
         self._supported_platforms = []
@@ -66,11 +67,15 @@ class Mirrorer:
                     self._supported_pyversions.append(env["python_version"])
                 if "platform_tag" in env:
                     self._supported_platforms.append(re.compile(env["platform_tag"]))
-                self._supported_platforms.append(
-                    re.compile(
-                        r".*" + env["sys_platform"] + r".*" + env["platform_machine"]
+                else:
+                    self._supported_platforms.append(
+                        re.compile(
+                            r".*"
+                            + env["sys_platform"]
+                            + r".*"
+                            + env["platform_machine"]
+                        )
                     )
-                )
 
         self._processed_pkgs = Cache()
 
@@ -203,9 +208,10 @@ class Mirrorer:
         files: Iterable[dict],
     ) -> Iterable[dict]:
         # remove files with unsupported extensions
+        pattern: str = rf"\.{self.package_type_regex}$"
         files = list(
             filter(
-                lambda file: re.search(r"\.(whl|zip|tar.gz)$", file["filename"]), files
+                lambda file: re.search(pattern, file["filename"]), files
             )
         )
 
@@ -224,9 +230,11 @@ class Mirrorer:
                     )
                     file["is_wheel"] = False
                     file["tags"] = None
-            except (packaging.version.InvalidVersion,
-                    packaging.utils.InvalidSdistFilename,
-                    packaging.utils.InvalidWheelFilename):
+            except (
+                packaging.version.InvalidVersion,
+                packaging.utils.InvalidSdistFilename,
+                packaging.utils.InvalidWheelFilename,
+            ):
                 # old versions
                 # expandvars-0.6.0-macosx-10.15-x86_64.tar.gz
 
@@ -290,7 +298,7 @@ class Mirrorer:
             # packaging.specifiers.SpecifierSet(req): Invalid specifier
             # gssapi: Invalid specifier: '>=3.6.*'
             # pyzmq: Invalid specifier: '!=3.0*'
-            req = fileinfo["requires-python"] = re.sub(r'([0-9])\.?\*', r'\1', req)
+            req = fileinfo["requires-python"] = re.sub(r"([0-9])\.?\*", r"\1", req)
             try:
                 spec_set = packaging.specifiers.SpecifierSet(req)
                 for supported_python in self._supported_pyversions:
@@ -309,7 +317,7 @@ class Mirrorer:
                 if intrp_name not in ("py", "cp"):
                     continue
 
-                intrp_set = packaging.specifiers.SpecifierSet(r'>=' + intrp_ver)
+                intrp_set = packaging.specifiers.SpecifierSet(r">=" + intrp_ver)
                 # As an example, cp38 seems to indicate CPython 3.8+, so we
                 # check if the version matches any of the supported Pythons, and
                 # only skip it if it does not match any.
@@ -320,11 +328,7 @@ class Mirrorer:
                     )
                 )
 
-                if (
-                    intrp_ver
-                    and intrp_ver != "3"
-                    and not intrp_ver_matched
-                ):
+                if intrp_ver and intrp_ver != "3" and not intrp_ver_matched:
                     continue
 
                 if tag.platform == "any":
@@ -388,6 +392,7 @@ class Mirrorer:
         if os.path.exists(target):
             truehash = self._hash_file(target, hashalg)
             if truehash == exphash:
+                touch_file(target, fileinfo)
                 return True
 
         print("\t{}...".format(fileinfo["url"]), end=" ")
@@ -404,6 +409,7 @@ class Mirrorer:
                 )
             )
 
+        touch_file(target, fileinfo)
         return True
 
     def _hash_file(self, filepath: str, hashalg: str) -> str:
@@ -576,6 +582,13 @@ def main():
             "Transitive dependencies still mirror only the latest matching release. "
             "(Default: only the latest matching release)"
         ),
+    ),
+    parser.add_argument(
+        "--package-type-regex",
+        dest="package_type_regex",
+        default=r"(whl|zip|tar\.gz)",
+        type=str,
+        help="Regular expression to filter which package file types are mirrored",
     )
 
     server.add_arguments(parser)
