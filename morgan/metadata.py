@@ -9,6 +9,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.markers import Marker, Variable as MarkerVariable
 import tomli
 
+from morgan.utils import filter_relevant_requirements
 
 METADATA_VERSION_11 = Version("1.1")
 METADATA_VERSION_12 = Version("1.2")
@@ -188,24 +189,7 @@ class MetadataParser:
             elif extra in extras:
                 deps |= self.optional_dependencies[extra]
 
-        irrelevant_deps = set()
-        for dep in deps:
-            relevant = True
-            if dep.marker:
-                relevant = False
-                for env in envs:
-                    env["extra"] = ",".join(extras)
-                    if dep.marker.evaluate(env):
-                        relevant = True
-                        break
-
-            if not relevant:
-                irrelevant_deps.add(dep)
-                continue
-
-        deps -= irrelevant_deps
-
-        return deps
+        return filter_relevant_requirements(deps, envs, extras)
 
     def _add_core_requirements(self, reqs):
         self.core_dependencies |= set([Requirement(dep) for dep in reqs])
