@@ -1,3 +1,12 @@
+# ruff: noqa: FBT001, FBT002, PERF401, PLR2004, PLW0602, PLW0603, S104
+# FBT: allow boolean as positional argument
+# PERF401: allow manual list comprehensions
+# PLR2004: allow magic values in comparisons
+# PLW0602: allow unassigned globals
+# PLW0603: allow usage of globals
+# S104: allow binding to all network interfaces even if it is insecure
+from __future__ import annotations
+
 import argparse
 import html
 import http.server
@@ -37,7 +46,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(
                 b"The server cannot generate a response "
-                b"in any of the requested MIME types"
+                b"in any of the requested MIME types",
             )
             return
 
@@ -57,7 +66,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         self._serve_notfound()
 
-    def _serve_notfound(self, msg: str = None):
+    def _serve_notfound(self, msg: str | None = None):
         self.send_response(404)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
@@ -89,7 +98,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 newline = "\n" if i < len(projects) - 1 else ""
                 self.wfile.write(
                     '    <a href="/{}/">{}</a>{}'.format(
-                        html.escape(project["name"]), project["name"], newline
+                        html.escape(project["name"]),
+                        project["name"],
+                        newline,
                     ).encode("utf-8"),
                 )
             self.wfile.write(b"\n  </body>\n</html>")
@@ -135,7 +146,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", PYPI_JSON_TYPE_V1)
             self.end_headers()
             body = json.dumps(
-                {"name": project, "meta": {"api-version": "1.0"}, "files": files}
+                {"name": project, "meta": {"api-version": "1.0"}, "files": files},
             )
             self.wfile.write(body.encode("utf-8"))
         else:
