@@ -64,3 +64,24 @@ docstring-code-format = true
 # Set the line length limit used when formatting code snippets in
 # docstrings.
 docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",  # don't enforce annotations
+    "D10",  # don't enforce docstrings
+    "D2",   # don't enforce pydoc style
+    "D4",   # don't enforce pydoc style
+    "E501", # ignore line-too-long as we ruff format is enforced anyway
+    "PTH",  # ignore pathlib suggestions
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ANN",     # exclude annotations from test files
+    "ARG",     # Unused function args might be fixtures
+    "FBT",     # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "INP001",  # "implicit namespace package" is invalid for pytest
+    "PLR2004", # allow magic-value-comparison in tests
+    "S101",    # asserts are allowed in tests
+]
