@@ -11,7 +11,7 @@ from packaging.version import Version
 if Version(platform.python_version()) < Version("3.8"):
     import importlib_metadata as metadata
 else:
-    from importlib import metadata
+    from importlib import metadata  # type: ignore[no-redef]
 
 
 def generate_env(name: str = "local"):
@@ -54,6 +54,7 @@ def generate_reqs(mode: str = ">="):
     requirements = {
         dist.metadata["Name"].lower(): f"{mode}{dist.version}"
         for dist in metadata.distributions()
+        if dist.metadata is not None
     }
     config = configparser.ConfigParser()
     config["requirements"] = OrderedDict(sorted(requirements.items()))

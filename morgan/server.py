@@ -15,6 +15,7 @@ import os
 import pathlib
 import re
 import urllib.parse
+from typing import Any
 
 PYPI_JSON_TYPE_V1 = "application/vnd.pypi.simple.v1+json"
 PYPI_JSON_TYPE_LT = "application/vnd.pypi.simple.latest+json"
@@ -118,7 +119,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         with os.scandir(path) as it:
             for entry in it:
                 if re.search(r"\.(whl|zip|tar\.gz)$", entry.name):
-                    file = {
+                    file: dict[str, Any] = {
                         "filename": entry.name,
                         "url": f"/{project}/{entry.name}",
                         "hashes": {},
@@ -227,7 +228,7 @@ def run(
     ).serve_forever()
 
 
-def parse_accept_header(header_val: str) -> str:
+def parse_accept_header(header_val: str | None) -> str | None:
     """
     Parses an Accept HTTP header and returns a selected MIME type for the server
     to answer with, honoring priorities defined in the header value. If the
