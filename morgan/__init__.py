@@ -293,7 +293,8 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python"):
+        req = fileinfo.get("requires-python")
+        if req:
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
