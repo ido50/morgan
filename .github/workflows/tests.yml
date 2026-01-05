@@ -21,7 +21,13 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
-    runs-on: ubuntu-latest
+        platform-version:
+          - "ubuntu-24.04"
+        include:
+          # Python 3.7 only runs on Ubuntu 22.04
+          - python-version: "3.7"
+            platform-version: "ubuntu-22.04"
+    runs-on: ${{ matrix.platform-version }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Set up Python ${{ matrix.python-version }}
