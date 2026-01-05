@@ -140,7 +140,7 @@ class Mirrorer:
     def _mirror(  # noqa: C901, PLR0912
         self,
         requirement: packaging.requirements.Requirement,
-        required_by: packaging.requirements.Requirement = None,
+        required_by: packaging.requirements.Requirement | None = None,
     ) -> dict | None:
         if self._processed_pkgs.check(requirement):
             return None
@@ -156,7 +156,7 @@ class Mirrorer:
         else:
             print(f"{requirement}")
 
-        data: dict = None
+        data: dict | None = None
 
         # get information about this package from the Simple API in JSON
         # format as per PEP 691
@@ -171,6 +171,9 @@ class Mirrorer:
         with urllib.request.urlopen(request) as response:  # noqa: S310
             data = json.load(response)
             response_url = str(response.url)
+            if not data:
+                msg = f"Failed loading metadata: {response}"
+                raise RuntimeError(msg)
 
         # check metadata version ~1.0
         v_str = data["meta"]["api-version"]
@@ -222,9 +225,9 @@ class Mirrorer:
     def _filter_files(
         self,
         requirement: packaging.requirements.Requirement,
-        required_by: packaging.requirements.Requirement,
+        required_by: packaging.requirements.Requirement | None,
         files: Iterable[dict],
-    ) -> Iterable[dict]:
+    ) -> Iterable[dict] | None:
         # remove files with unsupported extensions
         pattern: str = rf"\.{self.package_type_regex}$"
         files = list(filter(lambda file: re.search(pattern, file["filename"]), files))
@@ -334,7 +337,7 @@ class Mirrorer:
                 if intrp_name not in ("py", "cp"):
                     continue
 
-                intrp_set = packaging.specifiers.SpecifierSet(r">=" + intrp_ver)
+                intrp_set = packaging.specifiers.SpecifierSet(">=" + intrp_ver)
                 # As an example, cp38 seems to indicate CPython 3.8+, so we
                 # check if the version matches any of the supported Pythons, and
                 # only skip it if it does not match any.
@@ -364,7 +367,7 @@ class Mirrorer:
         self,
         requirement: packaging.requirements.Requirement,
         fileinfo: dict,
-    ) -> dict[str, packaging.requirements.Requirement]:
+    ) -> dict[str, packaging.requirements.Requirement] | None:
         filepath = os.path.join(self.index_path, requirement.name, fileinfo["filename"])
         hashalg = (
             PREFERRED_HASH_ALG
@@ -478,7 +481,7 @@ class Mirrorer:
         return md
 
 
-def parse_interpreter(inp: str) -> tuple[str, str]:
+def parse_interpreter(inp: str) -> tuple[str, str | None]:
     """
     Parse interpreter tags in the name of a binary wheel file. Returns a tuple
     of interpreter name and optional version, which will either be <major> or
@@ -491,7 +494,7 @@ def parse_interpreter(inp: str) -> tuple[str, str]:
 
     intr = m.group(1)
     version = None
-    if m.lastindex > 1:
+    if m.lastindex and m.lastindex > 1:
         version = m.group(2)
         if m.lastindex > 2:  # noqa: PLR2004
             version = f"{version}.{m.group(3)}"
