@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import email.parser
 import re
-from typing import BinaryIO, Callable, Dict, Iterable, Set
+from typing import IO, BinaryIO, Callable, Iterable
 
 import tomli
 from packaging.markers import Marker
@@ -43,15 +45,15 @@ class MetadataParser:
         The version of the package
     python_requirement : packaging.specifiers.SpecifierSet
         A specification of the Python versions supported by the package.
-    extras_provided : Set[str]
+    extras_provided : set[str]
         Extras provided by the package.
-    core_dependencies: Set[packaging.requirements.Requirement]
+    core_dependencies: set[packaging.requirements.Requirement]
         Core dependencies of the package.
-    optional_dependencies: Dict[str, Set[packaging.requirements.Requirement]]
+    optional_dependencies: dict[str, set[packaging.requirements.Requirement]]
         Optional dependencies of the package. A dictionary whose keys are
         either names of extras (from extras_provided) or environment marker
         constraints (e.g. :python_version<2.7).
-    build_dependencies : Set[packaging.requirements.Requirement]
+    build_dependencies : set[packaging.requirements.Requirement]
         Dependencies required to build the package.
     """
 
@@ -71,14 +73,15 @@ class MetadataParser:
         self.name: str = None
         self.version: Version = None
         self.python_requirement: SpecifierSet = None
-        self.extras_provided: Set[str] = set()
-        self.core_dependencies: Set[Requirement] = set()
-        self.optional_dependencies: Dict[str, Set[Requirement]] = {}
-        self.build_dependencies: Set[Requirement] = set()
+        self.extras_provided: set[str] = set()
+        self.core_dependencies: set[Requirement] = set()
+        self.optional_dependencies: dict[str, set[Requirement]] = {}
+        self.build_dependencies: set[Requirement] = set()
 
+    # ruff: noqa: C901
     def parse(
         self,
-        opener: Callable[[str], BinaryIO],
+        opener: Callable[[str], IO[bytes]],
         filename: str,
     ):
         """
@@ -87,7 +90,7 @@ class MetadataParser:
 
         Parameters
         ----------
-        opener : Callable[[str], BinaryIO]
+        opener : Callable[[str], IO[bytes]]
             A function that can be used to open the file. The function takes one
             parameter, which is the file name, and returns a file object opened
             in binary mode.
@@ -114,7 +117,8 @@ class MetadataParser:
                 parse_func = self._parse_metadata_file
                 main_metadata_file = True
             elif re.fullmatch(
-                r"[^/]+(/[^/]+)?\.egg-info/(setup_)?requires.txt", filename
+                r"[^/]+(/[^/]+)?\.egg-info/(setup_)?requires.txt",
+                filename,
             ):
                 parse_func = self._parse_requirestxt
             elif re.fullmatch(r"[^/]+/pyproject.toml", filename):
@@ -142,12 +146,14 @@ class MetadataParser:
         read yet, an exception will be raised.
         """
         if not hasattr(self, "_metadata_file"):
-            raise Exception("Main METADATA file has not been read yet")
+            # ruff: noqa: TRY002
+            msg = "Main METADATA file has not been read yet"
+            raise Exception(msg)
 
         with open(target, "wb") as out:
             out.write(self._metadata_file)
 
-    def dependencies(self, extras: Set[str], envs: Iterable[Dict]) -> Set[Requirement]:
+    def dependencies(self, extras: set[str], envs: Iterable[dict]) -> set[Requirement]:
         """
         Resolves the dependencies of the package, returning a set of
         requirements. Only requirements that are relevant to the provided extras
@@ -155,12 +161,12 @@ class MetadataParser:
 
         Parameters
         ----------
-        extras : Set[str] = set()
+        extras : set[str] = set()
             A set of extras that the package was required with. For example, if
             the instance of this class is used to parse the metadata of the
             package "pymongo", and the requirement string for that package was
             "pymongo[snappy,zstd]", then the set of extras will be (snappy, zstd).
-        envs: Iterable[Dict] = []
+        envs: Iterable[dict] = []
             The list of environments for which Morgan is downloading package
             distributions. These are simple dictionaries whose keys match those
             defined by the "Environment Markers" section of PEP 508.
@@ -179,6 +185,8 @@ class MetadataParser:
                 # this dependency includes a set of environment marker
                 # specifications
                 orig = extra
+                # ruff: noqa: PLW2901, FIX002, TD003
+                # TODO(grische): rewrite to avoid overwriting extra variable from the loop
                 (extra, spec) = extra.split(":")
                 if extra and extra not in extras:
                     continue
@@ -193,14 +201,14 @@ class MetadataParser:
         return filter_relevant_requirements(deps, envs, extras)
 
     def _add_core_requirements(self, reqs):
-        self.core_dependencies |= set([Requirement(dep) for dep in reqs])
+        self.core_dependencies |= {Requirement(dep) for dep in reqs}
 
     def _add_optional_requirements(self, extra, reqs):
         if extra not in self.optional_dependencies:
             self.optional_dependencies[extra] = set()
-        self.optional_dependencies[extra] |= set([Requirement(dep) for dep in reqs])
+        self.optional_dependencies[extra] |= {Requirement(dep) for dep in reqs}
 
-    def _parse_pyproject(self, fp):
+    def _parse_pyproject(self, fp: BinaryIO):
         data = tomli.load(fp)
         project = data.get("project")
 
@@ -222,17 +230,18 @@ class MetadataParser:
             if "optional-dependencies" in project:
                 for extra in project["optional-dependencies"]:
                     self._add_optional_requirements(
-                        extra, project["optional-dependencies"][extra]
+                        extra,
+                        project["optional-dependencies"][extra],
                     )
 
         build_system = data.get("build-system")
         if build_system is not None and "requires" in build_system:
-            self.build_dependencies |= set(
-                [Requirement(req) for req in build_system["requires"]]
-            )
+            self.build_dependencies |= {
+                Requirement(req) for req in build_system["requires"]
+            }
 
-    def _parse_metadata_file(self, fp):
-        data = email.parser.BytesParser().parse(fp, True)
+    def _parse_metadata_file(self, fp: IO[bytes]):
+        data = email.parser.BytesParser().parse(fp, headersonly=True)
 
         (name, version, metadata_version) = (
             data.get("Name"),
@@ -272,6 +281,7 @@ class MetadataParser:
                 req = Requirement(requirement_str)
                 extra = None
                 if req.marker is not None:
+                    # ruff: noqa: SLF001
                     for marker in req.marker._markers:
                         if (
                             isinstance(marker[0], MarkerVariable)
@@ -293,11 +303,11 @@ class MetadataParser:
             for requirement_str in requires:
                 self.core_dependencies.add(Requirement(requirement_str))
 
-    def _parse_requirestxt(self, fp):
+    def _parse_requirestxt(self, fp: BinaryIO):
         section = None
         content = []
-        for line in fp.readlines():
-            line = line.strip().decode("UTF-8")
+        for line_bytes in fp:
+            line = line_bytes.strip().decode("UTF-8")
             if line.startswith("["):
                 if line.endswith("]"):
                     if section or content:
@@ -310,7 +320,8 @@ class MetadataParser:
                     section = line[1:-1]
                     content = []
                 else:
-                    raise ValueError("Invalid section heading", line)
+                    msg = "Invalid section heading"
+                    raise ValueError(msg, line)
             elif line:
                 content.append(line)
 
