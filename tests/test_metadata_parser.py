@@ -79,7 +79,7 @@ pytest>=6.0.0
         """Test parsing a metadata file with dependencies"""
         mock_fp = io.BytesIO(metadata_content)
         # pylint: disable=W0212
-        parser._parse_metadata_file(mock_fp)
+        parser._parse_metadata_file(mock_fp)  # noqa: SLF001
 
         assert parser.name == "example-package"
         assert parser.version == Version("1.0.0")
@@ -87,14 +87,14 @@ pytest>=6.0.0
         assert parser.extras_provided == {"web", "test"}
 
         assert len(parser.core_dependencies) == 2  # requests and numpy
-        assert set(dep.name for dep in parser.core_dependencies) == {
+        assert {dep.name for dep in parser.core_dependencies} == {
             "requests",
             "numpy",
         }
 
         assert set(parser.optional_dependencies.keys()) == {"web", "test"}
         assert len(parser.optional_dependencies["web"]) == 1
-        assert list(parser.optional_dependencies["web"])[0].name == "flask"
+        assert next(iter(parser.optional_dependencies["web"])).name == "flask"
 
     def test_parse_pyproject(self, parser, pyproject_content):
         """Test parsing a pyproject.toml file"""
@@ -116,18 +116,18 @@ pytest>=6.0.0
             },
         ):
             # pylint: disable=W0212
-            parser._parse_pyproject(mock_fp)
+            parser._parse_pyproject(mock_fp)  # noqa: SLF001
 
         assert parser.name == "example-package"
         assert parser.version == Version("1.0.0")
         assert str(parser.python_requirement) == ">=3.7"
 
         assert len(parser.core_dependencies) == 1
-        assert list(parser.core_dependencies)[0].name == "requests"
+        assert next(iter(parser.core_dependencies)).name == "requests"
 
         assert set(parser.optional_dependencies.keys()) == {"web", "test"}
         assert len(parser.build_dependencies) == 2
-        assert set(dep.name for dep in parser.build_dependencies) == {
+        assert {dep.name for dep in parser.build_dependencies} == {
             "setuptools",
             "wheel",
         }
@@ -138,10 +138,10 @@ pytest>=6.0.0
         mock_fp.name = "package.egg-info/requires.txt"  # Not setup_requires.txt
 
         # pylint: disable=W0212
-        parser._parse_requirestxt(mock_fp)
+        parser._parse_requirestxt(mock_fp)  # noqa: SLF001
 
         assert len(parser.core_dependencies) == 2
-        assert set(dep.name for dep in parser.core_dependencies) == {
+        assert {dep.name for dep in parser.core_dependencies} == {
             "requests",
             "click",
         }
@@ -149,13 +149,13 @@ pytest>=6.0.0
         assert set(parser.optional_dependencies.keys()) == {"web", "test"}
         assert len(parser.optional_dependencies["web"]) == 2
         assert len(parser.optional_dependencies["test"]) == 1
-        assert set(dep.name for dep in parser.optional_dependencies["web"]) == {
+        assert {dep.name for dep in parser.optional_dependencies["web"]} == {
             "flask",
             "jinja2",
         }
 
     @pytest.mark.parametrize(
-        "extras, python_version, expected_count",
+        ("extras", "python_version", "expected_count"),
         [
             (set(), "3.7", 3),  # numpy excluded due to marker
             (set(), "3.8", 4),  # numpy included due to marker

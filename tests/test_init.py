@@ -11,7 +11,7 @@ from morgan import PYPI_ADDRESS, Mirrorer, parse_interpreter, parse_requirement,
 
 class TestParseInterpreter:
     @pytest.mark.parametrize(
-        "interpreter_string, expected_name, expected_version",
+        ("interpreter_string", "expected_name", "expected_version"),
         [
             ("cp38", "cp", "3.8"),
             ("cp3", "cp", "3"),
@@ -30,7 +30,10 @@ class TestParseInterpreter:
         ],
     )
     def test_parse_interpreter_components(
-        self, interpreter_string, expected_name, expected_version
+        self,
+        interpreter_string,
+        expected_name,
+        expected_version,
     ):
         name, version = parse_interpreter(interpreter_string)
         assert name == expected_name
@@ -77,7 +80,7 @@ class TestMirrorer:
 
                 [requirements]
                 requests = >=2.0.0
-                """
+                """,
             )
         return tmpdir
 
@@ -118,7 +121,8 @@ class TestMirrorer:
         )
 
         with open(server.__file__, "rb") as original_server, open(
-            expected_serverpath, "rb"
+            expected_serverpath,
+            "rb",
         ) as copied_server:
             assert original_server.read() == copied_server.read(), (
                 "Copied file should match source"
@@ -142,7 +146,7 @@ class TestMirrorer:
         expected_hash = hashlib.sha256(test_data).hexdigest()
 
         # pylint: disable=W0212
-        digest = mirrorer._hash_file(test_file, "sha256")
+        digest = mirrorer._hash_file(test_file, "sha256")  # noqa: SLF001
 
         assert digest == expected_hash, "Returned hash should match sha256 digest"
         hash_file = test_file + ".hash"
@@ -166,7 +170,7 @@ class TestFilterFiles:
                 sys_platform = linux
                 platform_machine = x86_64
                 platform_tag = manylinux
-                """
+                """,
             )
         return tmp_path
 
@@ -190,7 +194,7 @@ class TestFilterFiles:
         fileinfo = {
             "filename": filename,
             "hashes": {
-                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             },
             "url": f"https://example.com/{filename}",
         }
@@ -214,7 +218,7 @@ class TestFilterFiles:
         return [str(file["version"]) for file in files]
 
     @pytest.mark.parametrize(
-        "version_spec,expected_versions",
+        ("version_spec", "expected_versions"),
         [
             (">=1.5.0", ["1.6.0", "1.5.2", "1.5.1"]),
             (">=1.5.0,<1.6.0", ["1.5.2", "1.5.1"]),
@@ -224,25 +228,31 @@ class TestFilterFiles:
         ids=["basic_range", "complex_range", "exact_match", "no_match"],
     )
     def test_filter_files_with_all_versions_mirrored(
-        self, make_mirrorer, sample_files, version_spec, expected_versions
+        self,
+        make_mirrorer,
+        sample_files,
+        version_spec,
+        expected_versions,
     ):
         """Test that file filtering correctly handles different version specifications."""
         mirrorer = make_mirrorer(
             mirror_all_versions=True,
         )
         requirement = packaging.requirements.Requirement(
-            f"sample_package{version_spec}"
+            f"sample_package{version_spec}",
         )
 
         # pylint: disable=W0212
-        filtered_files = mirrorer._filter_files(
-            requirement=requirement, required_by=None, files=sample_files
+        filtered_files = mirrorer._filter_files(  # noqa: SLF001
+            requirement=requirement,
+            required_by=None,
+            files=sample_files,
         )
 
         assert self.extract_versions(filtered_files) == expected_versions
 
     @pytest.mark.parametrize(
-        "version_spec,expected_versions",
+        ("version_spec", "expected_versions"),
         [
             (">=1.5.0", ["1.6.0"]),
             (">=1.5.0,<1.6.0", ["1.5.2"]),
@@ -252,17 +262,23 @@ class TestFilterFiles:
         ids=["basic_range", "complex_range", "exact_match", "no_match"],
     )
     def test_filter_files_with_latest_version_mirrored(
-        self, make_mirrorer, sample_files, version_spec, expected_versions
+        self,
+        make_mirrorer,
+        sample_files,
+        version_spec,
+        expected_versions,
     ):
         """Test that file filtering correctly handles different version specifications."""
         mirrorer = make_mirrorer(mirror_all_versions=False)
         requirement = packaging.requirements.Requirement(
-            f"sample_package{version_spec}"
+            f"sample_package{version_spec}",
         )
 
         # pylint: disable=W0212
-        filtered_files = mirrorer._filter_files(
-            requirement=requirement, required_by=None, files=sample_files
+        filtered_files = mirrorer._filter_files(  # noqa: SLF001
+            requirement=requirement,
+            required_by=None,
+            files=sample_files,
         )
 
         assert self.extract_versions(filtered_files) == expected_versions
