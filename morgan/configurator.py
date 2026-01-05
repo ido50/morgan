@@ -64,11 +64,12 @@ def add_arguments(parser: argparse.ArgumentParser):
     """
     Adds command line options specific to this script to an argument parser.
     """
-
     parser.add_argument(
-        "-e", "--env", dest="env", help="Name of environment to configure"
+        "-e",
+        "--env",
+        dest="env",
+        help="Name of environment to configure",
     )
-
     parser.add_argument(
         "-m",
         "--mode",
