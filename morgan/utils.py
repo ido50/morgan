@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import os
 import re
 from collections import OrderedDict
-from typing import Dict, Iterable, Optional, Set
+from typing import TYPE_CHECKING, Iterable
 
 import dateutil  # type: ignore[import-untyped]
-from packaging.requirements import Requirement
+
+if TYPE_CHECKING:
+    from packaging.requirements import Requirement
 
 
 def to_single_dash(filename):
-    "https://packaging.python.org/en/latest/specifications/version-specifiers/#version-specifiers"
+    """https://packaging.python.org/en/latest/specifications/version-specifiers/#version-specifiers"""
 
     # selenium-2.0-dev-9429.tar.gz
     m = re.search(r"-[0-9].*-", filename)
@@ -23,7 +27,7 @@ def to_single_dash(filename):
     # selenium-2.0.dev9429.tar.gz
 
 
-class Cache:  # pylint: disable=protected-access
+class Cache:
     def __init__(self):
         self.cache: set[str] = set()
 
@@ -38,18 +42,21 @@ class Cache:  # pylint: disable=protected-access
         else:
             self.cache.add(str(req))
 
-    def is_simple_case(self, req):
+    def is_simple_case(self, req: Requirement) -> bool:
         if not req.marker and not req.extras:
             specifier = req.specifier
             if not specifier:
                 return True
+            # ruff: noqa: SLF001
             if all(spec.operator in (">", ">=") for spec in specifier._specs):
                 return True
         return False
 
 
 def is_requirement_relevant(
-    requirement: Requirement, envs: Iterable[Dict], extras: Optional[Set[str]] = None
+    requirement: Requirement,
+    envs: Iterable[dict],
+    extras: set[str] | None = None,
 ) -> bool:
     """Determines if a requirement is relevant for any of the provided environments.
 
@@ -84,9 +91,9 @@ def is_requirement_relevant(
 
 def filter_relevant_requirements(
     requirements: Iterable[Requirement],
-    envs: Iterable[Dict],
-    extras: Optional[Set[str]] = None,
-) -> Set[Requirement]:
+    envs: Iterable[dict],
+    extras: set[str] | None = None,
+) -> set[Requirement]:
     """Filters a collection of requirements to only those relevant for the provided environments.
 
     Args:
@@ -101,7 +108,7 @@ def filter_relevant_requirements(
 
 
 def touch_file(path: str, fileinfo: dict):
-    "upload-time: 2025-05-28T18:46:29.349478Z"
+    """upload-time: 2025-05-28T18:46:29.349478Z"""
     time_str = fileinfo.get("upload-time")
     if not path or not time_str:
         return
