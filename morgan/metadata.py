@@ -81,9 +81,9 @@ class MetadataParser:
     # ruff: noqa: C901
     def parse(
         self,
-        opener: Callable[[str], IO[bytes]],
+        opener: Callable[[str], IO[bytes]] | None,
         filename: str,
-    ):
+    ) -> None:
         """
         Parses a file, gathering whatever metadata can be gathered from it. Any
         file can be provided to the method, irrelevant files are simply ignored.
@@ -100,6 +100,9 @@ class MetadataParser:
             open it. The name is important, as the method uses it to determine
             the kind of file it is.
         """
+
+        if not opener:
+            return
 
         parse_func = None
         main_metadata_file = False
