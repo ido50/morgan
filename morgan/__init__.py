@@ -12,7 +12,7 @@ import traceback
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Iterable
+from typing import IO, Callable, Iterable
 
 import packaging.requirements
 import packaging.specifiers
@@ -227,7 +227,7 @@ class Mirrorer:
         requirement: packaging.requirements.Requirement,
         required_by: packaging.requirements.Requirement | None,
         files: Iterable[dict],
-    ) -> Iterable[dict] | None:
+    ) -> list[dict] | None:
         # remove files with unsupported extensions
         pattern: str = rf"\.{self.package_type_regex}$"
         files = list(filter(lambda file: re.search(pattern, file["filename"]), files))
@@ -337,6 +337,10 @@ class Mirrorer:
                 if intrp_name not in ("py", "cp"):
                     continue
 
+                if not intrp_ver:
+                    msg = f"Unexpected interpreter tag {tag.interpreter} in file {fileinfo['filename']}"
+                    raise ValueError(msg)
+
                 intrp_set = packaging.specifiers.SpecifierSet(">=" + intrp_ver)
                 # As an example, cp38 seems to indicate CPython 3.8+, so we
                 # check if the version matches any of the supported Pythons, and
@@ -367,7 +371,7 @@ class Mirrorer:
         self,
         requirement: packaging.requirements.Requirement,
         fileinfo: dict,
-    ) -> dict[str, packaging.requirements.Requirement] | None:
+    ) -> dict[str, dict[str, packaging.requirements.Requirement]] | None:
         filepath = os.path.join(self.index_path, requirement.name, fileinfo["filename"])
         hashalg = (
             PREFERRED_HASH_ALG
@@ -451,9 +455,9 @@ class Mirrorer:
     ) -> metadata.MetadataParser:
         md = metadata.MetadataParser(filepath)
 
-        archive = None
+        archive: tarfile.TarFile | zipfile.ZipFile | None = None
         members = None
-        opener = None
+        opener: Callable[[str], IO[bytes] | None]
 
         if re.search(r"\.(whl|zip)$", filepath):
             archive = zipfile.ZipFile(filepath)

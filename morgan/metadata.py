@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import email.parser
 import re
-from typing import IO, BinaryIO, Callable, Iterable
+from typing import IO, Any, Callable, Iterable
 
 import tomli
 from packaging.markers import Marker
@@ -70,9 +70,9 @@ class MetadataParser:
         """
 
         self.source_path: str = source_path
-        self.name: str = None
-        self.version: Version = None
-        self.python_requirement: SpecifierSet = None
+        self.name: str | None = None
+        self.version: Version | None = None
+        self.python_requirement: SpecifierSet | None = None
         self.extras_provided: set[str] = set()
         self.core_dependencies: set[Requirement] = set()
         self.optional_dependencies: dict[str, set[Requirement]] = {}
@@ -81,7 +81,7 @@ class MetadataParser:
     # ruff: noqa: C901
     def parse(
         self,
-        opener: Callable[[str], IO[bytes]] | None,
+        opener: Callable[[str], IO[bytes] | None],
         filename: str,
     ) -> None:
         """
@@ -90,7 +90,7 @@ class MetadataParser:
 
         Parameters
         ----------
-        opener : Callable[[str], IO[bytes]]
+        opener : Callable[[str], IO[bytes] | None]
             A function that can be used to open the file. The function takes one
             parameter, which is the file name, and returns a file object opened
             in binary mode.
@@ -101,10 +101,7 @@ class MetadataParser:
             the kind of file it is.
         """
 
-        if not opener:
-            return
-
-        parse_func = None
+        parse_func: Callable[[IO[bytes]], Any] | None = None
         main_metadata_file = False
 
         if re.search(r"\.whl$", self.source_path):
@@ -127,12 +124,20 @@ class MetadataParser:
             elif re.fullmatch(r"[^/]+/pyproject.toml", filename):
                 parse_func = self._parse_pyproject
 
-        if parse_func:
-            with opener(filename) as fp:
-                if main_metadata_file:
-                    self._metadata_file = fp.read()
-                    fp.seek(0)
-                parse_func(fp)
+        if not parse_func:
+            return
+
+        # Our file_object can be either None or IO[bytes] because
+        # TarFile.extractfile can return None
+        file_object = opener(filename)
+        if file_object is None:
+            return
+
+        with file_object as fp:
+            if main_metadata_file:
+                self._metadata_file = fp.read()
+                fp.seek(0)
+            parse_func(fp)
 
     def seen_metadata_file(self) -> bool:
         """
@@ -211,7 +216,7 @@ class MetadataParser:
             self.optional_dependencies[extra] = set()
         self.optional_dependencies[extra] |= {Requirement(dep) for dep in reqs}
 
-    def _parse_pyproject(self, fp: BinaryIO):
+    def _parse_pyproject(self, fp: IO[bytes]):
         data = tomli.load(fp)
         project = data.get("project")
 
@@ -246,15 +251,15 @@ class MetadataParser:
     def _parse_metadata_file(self, fp: IO[bytes]):
         data = email.parser.BytesParser().parse(fp, headersonly=True)
 
-        (name, version, metadata_version) = (
+        (name, version, metadata_version_str) = (
             data.get("Name"),
             data.get("Version"),
             data.get("Metadata-Version"),
         )
-        if metadata_version is None:
+        if metadata_version_str is None:
             return
 
-        metadata_version = Version(metadata_version)
+        metadata_version = Version(metadata_version_str)
 
         if name is not None:
             self.name = canonicalize_name(name)
@@ -306,9 +311,9 @@ class MetadataParser:
             for requirement_str in requires:
                 self.core_dependencies.add(Requirement(requirement_str))
 
-    def _parse_requirestxt(self, fp: BinaryIO):
+    def _parse_requirestxt(self, fp: IO[bytes]):
         section = None
-        content = []
+        content: list[str] = []
         for line_bytes in fp:
             line = line_bytes.strip().decode("UTF-8")
             if line.startswith("["):
@@ -334,3 +339,7 @@ class MetadataParser:
             self._add_build_requirements(content)
         else:
             self._add_core_requirements(content)
+
+    def _add_build_requirements(self, reqs):
+        msg = "Setuptools build requirements not supported"
+        raise NotImplementedError(msg)

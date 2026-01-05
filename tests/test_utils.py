@@ -190,7 +190,7 @@ class TestEnvironmentEvaluation:
 
     def test_filter_with_empty_requirements(self):
         """Test filtering with empty requirements list"""
-        requirements = []
+        requirements: list[Requirement] = []
         environments = [{"python_version": "3.8"}]
 
         filtered = filter_relevant_requirements(requirements, environments)
@@ -203,7 +203,7 @@ class TestEnvironmentEvaluation:
             Requirement("package1"),
             Requirement('package2; python_version >= "3.8"'),
         ]
-        environments = []
+        environments: list[dict] = []
 
         filtered = filter_relevant_requirements(requirements, environments)
 
