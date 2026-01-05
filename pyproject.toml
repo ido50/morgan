@@ -42,7 +42,11 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest~=7.1.3"]
-lint = ["ruff~=0.14.3"]
+lint = [
+    "ruff~=0.14.3",
+    "mypy~=1.19.1",
+    "importlib-metadata", # required by mypy for all Python versions
+]
 
 [tool.hatch.version]
 path = "morgan/__about__.py"
@@ -85,3 +89,7 @@ ignore = [
     "PLR2004", # allow magic-value-comparison in tests
     "S101",    # asserts are allowed in tests
 ]
+
+[tool.mypy]
+check_untyped_defs = true
+follow_untyped_imports = true
