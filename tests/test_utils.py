@@ -64,7 +64,7 @@ class TestEnvironmentEvaluation:
         assert result
 
     @pytest.mark.parametrize(
-        "requirement_str,expected",
+        ("requirement_str", "expected"),
         [
             ('package; python_version < "3.8"', True),
             ('package; python_version > "3.9"', False),
@@ -73,7 +73,10 @@ class TestEnvironmentEvaluation:
         ids=["py37_only", "py37_and_above", "py35_and_below"],
     )
     def test_requirement_with_python_version_marker(
-        self, requirement_str, expected, python_environments
+        self,
+        requirement_str,
+        expected,
+        python_environments,
     ):
         """Test requirements with Python version markers"""
         req = Requirement(requirement_str)
@@ -83,7 +86,7 @@ class TestEnvironmentEvaluation:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "requirement_str,expected",
+        ("requirement_str", "expected"),
         [
             ('package; sys_platform == "linux"', True),
             ('package; sys_platform == "linux" or sys_platform == "win32"', True),
@@ -92,7 +95,10 @@ class TestEnvironmentEvaluation:
         ids=["linux_only", "linux_or_windows", "freebsd_only"],
     )
     def test_requirement_with_platform_marker(
-        self, requirement_str, expected, platform_environments
+        self,
+        requirement_str,
+        expected,
+        platform_environments,
     ):
         """Test requirements with platform markers"""
         req = Requirement(requirement_str)
@@ -102,7 +108,7 @@ class TestEnvironmentEvaluation:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "extras,expected",
+        ("extras", "expected"),
         [
             ({"test"}, True),  # With matching extra
             ({"other"}, False),  # With non-matching extra
@@ -119,7 +125,7 @@ class TestEnvironmentEvaluation:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "requirement_str,extras,expected",
+        ("requirement_str", "extras", "expected"),
         [
             ('package; python_version >= "3.8" and extra == "test"', {"test"}, True),
             ('package; python_version >= "3.8" and extra == "test"', {"other"}, False),
@@ -136,7 +142,11 @@ class TestEnvironmentEvaluation:
         ],
     )
     def test_complex_requirement_with_combined_markers(
-        self, requirement_str, extras, expected, python_environments
+        self,
+        requirement_str,
+        extras,
+        expected,
+        python_environments,
     ):
         """Test requirements with combined markers"""
         req = Requirement(requirement_str)
@@ -146,7 +156,7 @@ class TestEnvironmentEvaluation:
         assert result == expected
 
     @pytest.mark.parametrize(
-        "extras,expected_count,expected_names",
+        ("extras", "expected_count", "expected_names"),
         [
             (None, 3, {"always-relevant", "py37-only", "py38-plus"}),
             ({"test"}, 4, {"always-relevant", "py37-only", "py38-plus", "test-extra"}),
@@ -154,7 +164,11 @@ class TestEnvironmentEvaluation:
         ids=["no_extras", "with_test_extra"],
     )
     def test_filter_relevant_requirements(
-        self, extras, expected_count, expected_names, python_environments
+        self,
+        extras,
+        expected_count,
+        expected_names,
+        python_environments,
     ):
         """Test filtering a collection of requirements"""
         requirements = [
@@ -166,7 +180,9 @@ class TestEnvironmentEvaluation:
         ]
 
         filtered = filter_relevant_requirements(
-            requirements, python_environments, extras=extras
+            requirements,
+            python_environments,
+            extras=extras,
         )
 
         assert len(filtered) == expected_count
@@ -174,7 +190,7 @@ class TestEnvironmentEvaluation:
 
     def test_filter_with_empty_requirements(self):
         """Test filtering with empty requirements list"""
-        requirements = []
+        requirements: list[Requirement] = []
         environments = [{"python_version": "3.8"}]
 
         filtered = filter_relevant_requirements(requirements, environments)
@@ -187,7 +203,7 @@ class TestEnvironmentEvaluation:
             Requirement("package1"),
             Requirement('package2; python_version >= "3.8"'),
         ]
-        environments = []
+        environments: list[dict] = []
 
         filtered = filter_relevant_requirements(requirements, environments)
 

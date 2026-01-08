@@ -4,7 +4,7 @@ from morgan import server
 
 
 @pytest.mark.parametrize(
-    "accept_option, exp_dict",
+    ("accept_option", "exp_dict"),
     [
         (server.GENL_HTML_TYPE, {"mime": server.GENL_HTML_TYPE, "priority": 0}),
         (
@@ -35,7 +35,7 @@ def test_parse_accept_option(accept_option, exp_dict):
 
 
 @pytest.mark.parametrize(
-    "accept_header, exp_mime",
+    ("accept_header", "exp_mime"),
     [
         (None, server.PYPI_HTML_TYPE_V1),
         (
