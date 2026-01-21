@@ -142,16 +142,19 @@ class Mirrorer:
         if self._processed_pkgs.check(requirement):
             return None
 
-        # Check if requirement is relevant for any environment
-        if not is_requirement_relevant(requirement, self.envs.values()):
-            print(f"\tSkipping {requirement}, not relevant for any environment")
-            self._processed_pkgs.add(requirement)  # Mark as processed
-            return None
-
+        # Display the cause of 'Skipping...'
+        extras = None
         if required_by:
+            extras = required_by.extras
             print(f"[{required_by}]: {requirement}")
         else:
             print(f"{requirement}")
+
+        # Check if requirement is relevant for any environment
+        if not is_requirement_relevant(requirement, self.envs.values(), extras=extras):
+            print("\tSkipping, not relevant for any environment")
+            self._processed_pkgs.add(requirement)  # Mark as processed
+            return None
 
         data: dict = None
 
@@ -278,7 +281,7 @@ class Mirrorer:
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(filter(lambda file: self._matches_environments(file), files))
+        files = list(filter(self._matches_environments, files))  # fix: unnecessary-lambda
 
         if len(files) == 0:
             print(f"Skipping {requirement}, no file matches environments")
@@ -293,7 +296,8 @@ class Mirrorer:
         return files
 
     def _matches_environments(self, fileinfo: dict) -> bool:
-        if req := fileinfo.get("requires-python"):
+        req = fileinfo.get("requires-python")  # python3.7
+        if req:
             # The Python versions in all of our environments must be supported
             # by this file in order to match.
             # Some packages specify their required Python versions with a simple
@@ -330,7 +334,7 @@ class Mirrorer:
                 # only skip it if it does not match any.
                 intrp_ver_matched = any(
                     map(
-                        lambda supported_python: intrp_set.contains(supported_python),
+                        intrp_set.contains,  # fix: unnecessary-lambda
                         self._supported_pyversions,
                     )
                 )
@@ -577,18 +581,16 @@ def main():
         action="store_true",
         help="Skip server copy in mirror command (default: False)",
     )
-    (
-        parser.add_argument(
-            "-a",
-            "--mirror-all-versions",
-            dest="mirror_all_versions",
-            action="store_true",
-            help=(
-                "For packages listed in the [requirements] section, mirror every release "
-                "that matches their version specifiers. "
-                "Transitive dependencies still mirror only the latest matching release. "
-                "(Default: only the latest matching release)"
-            ),
+    parser.add_argument(  # fix: del unnecessary parens
+        "-a",
+        "--mirror-all-versions",
+        dest="mirror_all_versions",
+        action="store_true",
+        help=(
+            "For packages listed in the [requirements] section, mirror every release "
+            "that matches their version specifiers. "
+            "Transitive dependencies still mirror only the latest matching release. "
+            "(Default: only the latest matching release)"
         ),
     )
     parser.add_argument(
