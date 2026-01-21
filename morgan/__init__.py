@@ -281,7 +281,9 @@ class Mirrorer:
 
         # Now we only have files that satisfy the requirement, and we need to
         # filter out files that do not match our environments.
-        files = list(filter(self._matches_environments, files))  # fix: unnecessary-lambda
+        files = list(
+            filter(self._matches_environments, files)
+        )  # fix: unnecessary-lambda
 
         if len(files) == 0:
             print(f"Skipping {requirement}, no file matches environments")
