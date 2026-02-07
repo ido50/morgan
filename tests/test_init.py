@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import os
+import urllib.error
 
 import packaging.requirements
 import pytest
@@ -266,3 +267,23 @@ class TestFilterFiles:
         )
 
         assert self.extract_versions(filtered_files) == expected_versions
+
+    def test_skipping(self, make_mirrorer):
+        """Test that requirement not skipping."""
+        mirrorer = make_mirrorer(mirror_all_versions=False)
+        required_by = packaging.requirements.Requirement("pyjwt[crypto]==2.10.1")
+        requirement = packaging.requirements.Requirement(
+            "cryptography>=3.4.0; extra == \"crypto\""
+        )
+
+        res = {}
+        try:
+            # if skipping then None
+            res = mirrorer._mirror(
+                requirement=requirement, required_by=required_by
+            )
+        except urllib.error.HTTPError as e:
+            # if not skipping then HTTPError
+            pass
+
+        assert res != None
