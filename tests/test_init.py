@@ -279,9 +279,7 @@ class TestFilterFiles:
         res = {}
         try:
             # if skipping then None
-            res = mirrorer._mirror(
-                requirement=requirement, required_by=required_by
-            )
+            res = mirrorer._mirror(requirement=requirement, required_by=required_by)
         except urllib.error.HTTPError as e:
             # if not skipping then HTTPError
             pass
