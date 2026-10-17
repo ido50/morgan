@@ -69,7 +69,6 @@ class Mirrorer:
         self._supported_pyversions = []
         self._supported_platforms = []
 
-        # ruff: noqa: ERA001
         # [local]
         # no-deps = true
         # do not check dependencies
