@@ -69,9 +69,7 @@ class Mirrorer:
         self._supported_pyversions = []
         self._supported_platforms = []
 
-        # [local]
-        # no-deps = true
-        # do not check dependencies
+        # do not check dependencies?
         self.no_deps = self.config.getboolean("local", "no-deps", fallback=False)
 
         for key in self.config:
