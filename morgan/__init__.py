@@ -72,7 +72,7 @@ class Mirrorer:
         # [local]
         # no-deps = true
         # do not check dependencies
-        self.no_deps = self.config.getboolean('local', 'no-deps', fallback=False)
+        self.no_deps = self.config.getboolean("local", "no-deps", fallback=False)
 
         for key in self.config:
             m = re.fullmatch(r"env\.(.+)", key)
